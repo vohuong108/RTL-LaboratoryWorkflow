@@ -1,0 +1,77 @@
+model LaboratoryWorkflow
+
+enum SampleState {Waiting, Processing, Finished, Error}
+
+class JobRequest
+end
+
+class Sample
+attributes
+	sampleID: String
+	state: SampleState init = SampleState::Waiting
+end
+
+class Assay
+attributes
+	name: String
+end
+
+abstract class ProtocoStep
+attributes
+	id: String
+end
+
+class Wash < ProtocoStep
+end
+
+class Incubate < ProtocoStep
+attributes
+	temperature: Real init = 293.15
+	duration: Integer
+end
+
+class DistributeSample < ProtocoStep
+attributes
+	volume: Real init = 0.0
+end
+
+
+class AddReagent < ProtocoStep
+attributes
+	volume: Real init = 0.0
+end
+
+class Reagent
+attributes
+	name: String
+end
+
+composition AssayRegistration between
+	JobRequest [1]
+	Assay [1] role assay
+end
+
+composition SampleRegistration between
+	JobRequest [0..1]
+	Sample [*] role samples
+end
+
+composition Steps between
+	Assay [1]
+	ProtocoStep [*] role steps
+end
+
+composition Reagents between
+	Assay [0..1]
+	Reagent [*] role reagents
+end
+
+association TraceStep between
+	ProtocoStep [0..1] role previous
+	ProtocoStep [0..1] role next
+end
+
+association UsedReagentType between
+	Reagent [1] role rType
+	AddReagent [*] role jAdd
+end

@@ -1,0 +1,106 @@
+model LiquidHandlingJobs
+
+
+enum JobStatus {Planned, Executing, Succeeded, Failed}
+
+class JobCollection
+end
+
+abstract class Job
+attributes
+	state: JobStatus init = JobStatus::Planned
+	protocolStepName: String
+end
+
+abstract class Labware
+attributes
+	name: String
+end
+
+class LiquidTransferJob < Job
+operations
+	numOfTip(): Integer = self.tips->size()
+	targetCavities(): Sequence(Integer) = self.tips->iterate(i; acc: Sequence(Integer) = Sequence{} | acc->append(i.targetCavityIndex))
+end
+
+class TipLiquidTransfer
+attributes
+	sourceCavityIndex: Integer
+	volume: Real init = 0.0
+	targetCavityIndex: Integer
+	status: JobStatus init = JobStatus::Planned 
+end
+
+class WashJob < Job
+attributes
+	cavities: String
+operations
+	numOfCavity(): Integer = self.cavities.split(' ')->size()
+	numOfNextLTJ(): Integer = self.next->size()
+	numOfNextTips(): Integer = self.next->iterate(i; acc: Integer = 0 | acc + i.oclAsType(LiquidTransferJob).numOfTip())
+	findCavityByIndex(index: Integer): Integer = self.cavities.split(' ')->at(index).toInteger()
+end
+
+class IncubateJob < Job
+attributes
+	temperature: Real init = 293.15
+	duration: Integer
+operations
+	incubatedSamples(): String = self.previous->iterate(i; acc: Sequence(Integer) = Sequence{} | acc->union(i.oclAsType(LiquidTransferJob).targetCavities()))->sortedBy(i | i)->iterate(i; acc: String = '' | acc.concat(i.toString() + ' '))
+	numOfPreTips(): Integer = self.previous->iterate(i; acc: Integer = 0 | acc + i.oclAsType(LiquidTransferJob).numOfTip())
+end
+
+class Microplate < Labware
+operations
+	--getSampleValid(): Collection(Integer) = self.s2mp.s->select(i | i.state <> SampleState::Error)->collect(i | i.sampleID.substring(7, --i.sampleID.size()).toInteger())
+	--getSampleValidString(): String = let l = self.getSampleValid() in l->sortedBy(i | i)->iterate(i; acc: String = '' | acc.concat(i.toString() + --' '))
+end
+
+class Trough < Labware
+end
+
+class TubeRunner < Labware
+attributes
+	barcodes: String init = ''
+end
+
+
+composition JobRegistration between
+	JobCollection [1]
+	Job [1..*] role jobs
+end
+
+composition LabwareRegistration between
+	JobCollection [0..1]
+	Labware [*] role labware
+end
+
+association TraceJob between
+	Job [0..*] role previous
+	Job [0..*] role next
+end
+
+composition Tips between
+	LiquidTransferJob [1] role pJob
+	TipLiquidTransfer [1..8] role tips ordered
+end
+
+association IncubatePlate between
+	Microplate [1] role tPlateI
+	IncubateJob [*] role jInI
+end
+
+association WashPlate between
+	Microplate [1] role tPlateW
+	WashJob [*] role jInW
+end
+
+association SrcTransfer between
+	Labware [1] role source
+	LiquidTransferJob [*] role sJob ordered
+end
+
+association TrgTransfer between
+	Labware [1] role target
+	LiquidTransferJob [*] role tJob ordered
+end
