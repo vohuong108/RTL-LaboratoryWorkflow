@@ -3,12 +3,19 @@ model LaboratoryWorkflow
 enum SampleState {Waiting, Processing, Finished, Error}
 
 class JobRequest
+operations
+	convertSampleEnum(state: SampleState): Integer = if state = SampleState::Waiting then 1 else 4 endif
 end
 
 class Sample
 attributes
 	sampleID: String
 	state: SampleState init = SampleState::Waiting
+operations
+	getId(): Integer = self.sampleID.substring(7, self.sampleID.size()).toInteger()
+	getPlateIndex(): Integer = (let tmp = self.getId().mod(96) in if tmp = 0 then 96 else tmp endif)
+	getSrcTubeOrder(): Integer = (let tmp = self.getId().mod(16) in if tmp = 0 then 16 else tmp endif)
+	getBatchMPOrder(): Integer = (let tmp = self.getPlateIndex() in ((tmp - 1)/8).floor() + 1)
 end
 
 class Assay
@@ -52,7 +59,7 @@ composition AssayRegistration between
 end
 
 composition SampleRegistration between
-	JobRequest [0..1]
+	JobRequest [0..1] role jr
 	Sample [*] role samples
 end
 

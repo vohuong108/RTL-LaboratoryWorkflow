@@ -369,11 +369,9 @@ checkSource(
     [self.wj.protocolStepName = self.w.id]
     `self.wj.protocolStepName := self.w.id`
     ``
-    [not (self.wj.cavities = '')]
-    `self.wj.cavities := mp.getSampleValidString()`
-    ``
-    --`self.wj.cavities := ij.incubatedSamples()`
-    --``
+    [self.wj.cavities = self.wj.previous->asSequence()->at(1).oclAsType(IncubateJob).incubatedSamples()]
+    `self.wj.cavities := ij.incubatedSamples()`
+    `self.wj.cavities := ij.incubatedSamples()`
 }
 end
 
@@ -413,7 +411,7 @@ checkSource(
 
     [mp.name <> Undefined]
     [t.name <> Undefined]
-    [wj.cavities <> '']
+    [wj.cavities <> Undefined]
 
     -------- Lựa chọn WashJob tiếp theo cần chạy theo thứ tự tăng dần --------
 
@@ -692,9 +690,9 @@ checkSource(
     [self.wj.protocolStepName = self.w.id]
     `self.wj.protocolStepName := self.w.id`
     ``
-    [not (self.wj.cavities = '')]
+    [self.wj.cavities = self.wj.previous->asSequence()->at(1).oclAsType(IncubateJob).incubatedSamples()]
     `self.wj.cavities := ij.incubatedSamples()`
-    ``
+    `self.wj.cavities := ij.incubatedSamples()`
 }
 end
 
@@ -744,8 +742,6 @@ checkSource(
     (tlt, s) as (tlt, s) in m_tlt2s:M_TLT2S
     M_TLT2S:[true = true]
     `self.s.state := SampleState::Error; self.tlt.pJob.state := JobStatus::Failed`
-    ``
+    `self.s.state := SampleState::Error; self.tlt.pJob.state := JobStatus::Failed`
 }
 end
-
-

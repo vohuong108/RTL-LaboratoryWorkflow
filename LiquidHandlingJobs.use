@@ -4,6 +4,9 @@ model LiquidHandlingJobs
 enum JobStatus {Planned, Executing, Succeeded, Failed}
 
 class JobCollection
+operations
+	convertJobEnum(status: JobStatus): Integer = if status = JobStatus::Planned then 1 else 4 endif
+	convertBarcodes(list: Sequence(String)): String = list->asOrderedSet()->iterate(i; acc: String = '' | acc + i + ' ')
 end
 
 abstract class Job
@@ -21,6 +24,9 @@ class LiquidTransferJob < Job
 operations
 	numOfTip(): Integer = self.tips->size()
 	targetCavities(): Sequence(Integer) = self.tips->iterate(i; acc: Sequence(Integer) = Sequence{} | acc->append(i.targetCavityIndex))
+	validTargetCavities(): Sequence(Integer) = self.tips->select(i | i.status <> JobStatus::Failed)->iterate(i; acc: Sequence(Integer) = Sequence{} | acc->append(i.targetCavityIndex))
+	findMinTrgTip(): TipLiquidTransfer = self.tips->sortedBy(e | e.targetCavityIndex)->first()
+	isFailed(): Boolean = if self.tips->exists(i | i.status = JobStatus::Failed) then true else false endif
 end
 
 class TipLiquidTransfer
@@ -29,6 +35,8 @@ attributes
 	volume: Real init = 0.0
 	targetCavityIndex: Integer
 	status: JobStatus init = JobStatus::Planned 
+operations
+	getBatchMPOrder(): Integer = ((self.targetCavityIndex - 1)/8).floor() + 1
 end
 
 class WashJob < Job
@@ -46,7 +54,7 @@ attributes
 	temperature: Real init = 293.15
 	duration: Integer
 operations
-	incubatedSamples(): String = self.previous->iterate(i; acc: Sequence(Integer) = Sequence{} | acc->union(i.oclAsType(LiquidTransferJob).targetCavities()))->sortedBy(i | i)->iterate(i; acc: String = '' | acc.concat(i.toString() + ' '))
+	incubatedSamples(): String = self.previous->iterate(i; acc: Sequence(Integer) = Sequence{} | acc->union(i.oclAsType(LiquidTransferJob).validTargetCavities()))->sortedBy(i | i)->iterate(i; acc: String = '' | acc.concat(i.toString() + ' '))
 	numOfPreTips(): Integer = self.previous->iterate(i; acc: Integer = 0 | acc + i.oclAsType(LiquidTransferJob).numOfTip())
 end
 
@@ -66,12 +74,12 @@ end
 
 
 composition JobRegistration between
-	JobCollection [1]
+	JobCollection [1] role jc
 	Job [1..*] role jobs
 end
 
 composition LabwareRegistration between
-	JobCollection [0..1]
+	JobCollection [0..1] role jc
 	Labware [*] role labware
 end
 
