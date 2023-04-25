@@ -6,7 +6,8 @@ enum JobStatus {Planned, Executing, Succeeded, Failed}
 class JobCollection
 operations
 	convertJobEnum(status: JobStatus): Integer = if status = JobStatus::Planned then 1 else 4 endif
-	convertBarcodes(list: Sequence(String)): String = list->asOrderedSet()->iterate(i; acc: String = '' | acc + i + ' ')
+	convertBarcodes(list: Sequence(String)): String = list->asOrderedSet()->iterate(i; acc: String = '' | if i <> '' then acc + i + ' ' else acc endif)
+	convertCavity(list: Bag(String)): String = list->collect(i | i.substring(7, i.size()).toInteger())->sortedBy(i | i)->iterate(i; acc: String = '' | acc + i.toString() + ' ')
 end
 
 abstract class Job
@@ -32,7 +33,7 @@ end
 class TipLiquidTransfer
 attributes
 	sourceCavityIndex: Integer
-	volume: Real init = 0.0
+	volume: Real init = 100.0
 	targetCavityIndex: Integer
 	status: JobStatus init = JobStatus::Planned 
 operations

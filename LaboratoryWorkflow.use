@@ -34,7 +34,7 @@ end
 class Incubate < ProtocoStep
 attributes
 	temperature: Real init = 293.15
-	duration: Integer
+	duration: Integer init = 40
 end
 
 class DistributeSample < ProtocoStep
