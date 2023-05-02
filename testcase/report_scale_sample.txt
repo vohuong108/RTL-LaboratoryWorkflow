@@ -1,0 +1,6 @@
+scale_sample_1: 695
+scale_sample_2: 770
+scale_sample_4: 1604
+scale_sample_8: 3799
+scale_sample_16: 15931
+scale_sample_32: 100440

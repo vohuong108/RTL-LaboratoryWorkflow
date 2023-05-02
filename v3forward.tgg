@@ -1,0 +1,744 @@
+transformation LabWorkflow2LiquidJob
+direction forward
+
+
+rule JobReq2JobCol
+checkSource(
+){
+    jr: JobRequest
+}checkTarget(
+){
+    jc: JobCollection
+}checkCorr(
+){
+    (jr, jc) as (jr, jc) in jr2jc:JR2JC
+}
+end
+
+rule reagent2trough
+checkSource(
+    jr: JobRequest
+    assay: Assay
+    (jr, assay): AssayRegistration
+    [assay.name <> Undefined]
+){
+    r: Reagent
+    (assay, r): Reagents
+    [r.name <> Undefined]
+    [r.r2t = Undefined]
+}checkTarget(
+    jc: JobCollection
+){
+    t: Trough
+    (jc, t): LabwareRegistration
+}checkCorr(
+    (jr, jc) as (jr, jc) in jr2jc:JR2JC
+){
+    (r, t) as (r, t) in r2t:R2T
+    R2T: [self.r.name = self.t.name]
+    `self.t.name := self.r.name`
+    `self.r.name := self.t.name`
+}
+end
+
+rule Sample2NewTubeRunner
+checkSource(
+    jr: JobRequest
+    s: Sample
+    (jr, s): SampleRegistration
+
+    [S2TR.allInstances()->size() <> Sample.allInstances()->size()]
+    [s.s2tr = Undefined]
+    [s.sampleID <> Undefined]
+    [s.state = SampleState::Waiting]
+    [S2TR.allInstances()->size() + 1 = s.getId()]
+    [S2TR.allInstances()->size().mod(16) = 0]
+){
+    
+}checkTarget(
+    jc: JobCollection
+){
+    tr: TubeRunner
+    (jc, tr): LabwareRegistration
+}checkCorr(
+    (jr, jc) as (jr, jc) in jr2jc:JR2JC
+){
+    (s, tr*) as (s, tr) in s2tr:S2TR
+    S2TR: 
+    [self.tr.barcodes.split(' ')->count(self.s.sampleID) = 1]
+    `self.tr.barcodes := self.tr.jc.convertBarcodes((self.tr.barcodes + ' ' + self.s.sampleID).split(' ')); self.tr.name := 'Tube'.concat((TubeRunner.allInstances()->size()).toString())`
+    ``
+}
+end
+
+rule Sample2ExistTubeRunner
+checkSource(
+    jr: JobRequest
+    s: Sample
+    (jr, s): SampleRegistration
+
+    [S2TR.allInstances()->size() <> Sample.allInstances()->size()]
+    [s.s2tr = Undefined]
+    [s.sampleID <> Undefined]
+    [s.state = SampleState::Waiting]
+    [S2TR.allInstances()->size() + 1 = s.getId()]
+){
+    
+}checkTarget(
+    jc: JobCollection
+    tr: TubeRunner
+    (jc, tr): LabwareRegistration
+    [tr.barcodes.split(' ')->size() < 16]
+){
+}checkCorr(
+    (jr, jc) as (jr, jc) in jr2jc:JR2JC
+){
+    (s, tr*) as (s, tr) in s2tr:S2TR
+    S2TR: 
+    [self.tr.barcodes.split(' ')->count(self.s.sampleID) = 1]
+    `self.tr.barcodes := self.tr.jc.convertBarcodes((self.tr.barcodes + ' ' + self.s.sampleID).split(' '))`
+    ``
+}
+end
+
+rule InitNewMicroplate
+checkSource(
+    jr: JobRequest
+    assay: Assay
+    s: Sample
+
+    (jr, assay): AssayRegistration
+    (jr, s): SampleRegistration
+
+    [S2MP.allInstances()->size() <> Sample.allInstances()->size()]
+    [assay.name <> Undefined]
+    [s.sampleID <> Undefined]
+    [s.s2mp = Undefined]
+    [S2MP.allInstances()->size() + 1 = s.getId()]
+
+    // Tất cả các microplate đều đã map đủ 96 sample
+    [S2MP.allInstances()->size().mod(96) = 0]
+    
+){
+}checkTarget(
+    jc: JobCollection
+){
+    mp: Microplate
+    (jc, mp): LabwareRegistration
+}checkCorr(
+    (jr, jc) as (jr, jc) in jr2jc:JR2JC
+){
+    (s, mp*) as (s, mp) in s2mp:S2MP
+    S2MP: [not (self.mp.name = Undefined)]
+    `self.mp.name := 'Plate' + Microplate.allInstances()->size().toString()`
+    ``
+}
+end
+
+rule SampleAssignExistMicroplate
+checkSource(
+    jr: JobRequest
+    assay: Assay
+    s: Sample
+
+    (jr, assay): AssayRegistration
+    (jr, s): SampleRegistration
+
+    [S2MP.allInstances()->size() <> Sample.allInstances()->size()]
+    [S2MP.allInstances()->size() + 1 = s.getId()]
+    [assay.name <> Undefined]
+    [s.sampleID <> Undefined]
+    [s.s2mp = Undefined]
+    
+    
+){
+}checkTarget(
+    jc: JobCollection
+    mp: Microplate
+    (jc, mp): LabwareRegistration
+
+    [mp.s2mp->size() < 96]
+    [mp.name <> '']
+){
+    
+}checkCorr(
+    (jr, jc) as (jr, jc) in jr2jc:JR2JC
+){
+    (s, mp*) as (s, mp) in s2mp:S2MP
+}
+end
+
+
+rule DistributeSample_New
+checkSource(
+    jr: JobRequest
+    assay: Assay
+    ds: DistributeSample
+    s: Sample
+
+    (jr, assay): AssayRegistration
+    (assay, ds): Steps
+    (jr, s): SampleRegistration
+
+    [ds.ds2ltj.ltj.tips->size() <> Sample.allInstances()->size()]
+    [ds.ds2ltj.ltj.tips->size() + 1 = s.getId()]
+    [ds.ds2ltj.ltj.tips->size().mod(8) = 0]
+
+    --[assay.name <> Undefined]
+    --[ds.id <> Undefined]
+    --[s.sampleID <> Undefined]
+    --[s.state = SampleState::Waiting]
+    
+){
+
+}checkTarget(
+    jc: JobCollection
+    tr: TubeRunner
+    mp: Microplate
+
+    (jc, tr): LabwareRegistration
+    (jc, mp): LabwareRegistration
+
+    --[tr.barcodes <> '']
+    --[mp.name <> Undefined]
+){
+    ltj: LiquidTransferJob
+    tlt: TipLiquidTransfer
+    
+    (jc, ltj): JobRegistration
+    (tr, ltj): SrcTransfer
+    (mp, ltj): TrgTransfer
+    (ltj, tlt): Tips
+    
+}checkCorr(
+    (jr, jc) as (jr, jc) in jr2jc:JR2JC
+    (s, tr) as (s, tr) in s2tr:S2TR
+    (s, mp) as (s, mp) in s2mp:S2MP
+){
+    (s*, tlt) as (s, tlt) in s2tlt:S2TLT
+    (ds*, ltj) as (ds, ltj) in ds2ltj:DS2LTJ
+    
+
+    S2TLT:
+    [true = true]
+    `self.tlt.sourceCavityIndex := self.s.getSrcTubeOrder()`
+    ``
+    [true = true]
+    `self.tlt.targetCavityIndex := self.s.getPlateIndex()`
+    ``
+    [true = true]
+    `self.tlt.volume := self.tlt.pJob.ds2ltj.ds.volume`
+    ``
+    DS2LTJ: 
+    [true = true]
+    `self.ltj.protocolStepName := self.ds.id`
+    ``
+}
+end
+
+
+rule DistributeSample_Exist
+checkSource(
+    jr: JobRequest
+    assay: Assay
+    ds: DistributeSample
+    s: Sample
+
+    (jr, assay): AssayRegistration
+    (assay, ds): Steps
+    (jr, s): SampleRegistration
+
+    [ds.ds2ltj.ltj.tips->size() <> Sample.allInstances()->size()]
+    [ds.ds2ltj.ltj.tips->size() + 1 = s.getId()]
+    [ds.ds2ltj.ltj.tips->size().mod(8) <> 0]
+
+    --[assay.name <> Undefined]
+    --[ds.id <> Undefined]
+    --[s.sampleID <> Undefined]
+    --[s.state = SampleState::Waiting]
+    
+){
+
+}checkTarget(
+    jc: JobCollection
+    tr: TubeRunner
+    mp: Microplate
+    ltj: LiquidTransferJob
+
+    (jc, tr): LabwareRegistration
+    (jc, mp): LabwareRegistration
+    (jc, ltj): JobRegistration
+    (tr, ltj): SrcTransfer
+    (mp, ltj): TrgTransfer
+
+    [ltj.tips->size() < 8]
+    --[tr.barcodes <> '']
+    --[mp.name <> Undefined]
+    
+){
+    
+    tlt: TipLiquidTransfer
+    (ltj, tlt): Tips
+    
+}checkCorr(
+    (jr, jc) as (jr, jc) in jr2jc:JR2JC
+    (s, tr) as (s, tr) in s2tr:S2TR
+    (s, mp) as (s, mp) in s2mp:S2MP
+    (ds, ltj) as (ds, ltj) in ds2ltj:DS2LTJ
+){
+    (s*, tlt) as (s, tlt) in s2tlt:S2TLT
+    S2TLT:
+    [true = true]
+    `self.tlt.sourceCavityIndex := self.s.getSrcTubeOrder()`
+    ``
+    [true = true]
+    `self.tlt.targetCavityIndex := self.s.getPlateIndex()`
+    ``
+   [true = true]
+    `self.tlt.volume := self.tlt.pJob.ds2ltj.ds.volume.oclAsType(Real)`
+    ``
+}
+end
+
+
+
+rule IncubateJob_New_1
+checkSource(
+    jr: JobRequest
+    assay: Assay
+    i: Incubate
+
+    (jr, assay): AssayRegistration
+    (assay, i): Steps
+
+    [i.i2ij.ij->size() = 0]
+    [assay.name <> Undefined]
+    [i.id <> Undefined]
+){
+    
+}checkTarget(
+    jc: JobCollection
+    mp: Microplate
+    (jc, mp): LabwareRegistration
+){
+    ij: IncubateJob
+    (jc, ij): JobRegistration
+    (mp, ij): IncubatePlate
+}checkCorr(
+    (jr, jc) as (jr, jc) in jr2jc:JR2JC
+){
+    (i*, ij) as (i, ij) in i2ij:I2IJ
+    (i*, mp*) as (i, mp) in i2mp:I2MP
+    I2IJ:
+    [self.ij.protocolStepName = self.i.id]
+    `self.ij.protocolStepName := self.i.id`
+    ``
+    [self.ij.temperature = self.i.temperature]
+    `self.ij.temperature := self.i.temperature`
+    ``
+    [self.ij.duration = self.i.duration]
+    `self.ij.duration := self.i.duration`
+    ``
+}
+end
+
+
+rule IncubateJob_New_2
+checkSource(
+    jr: JobRequest
+    assay: Assay
+    i: Incubate
+
+    (jr, assay): AssayRegistration
+    (assay, i): Steps
+
+    [i.i2ij.ij->size() > 0 and i.i2ij.ij->size() < Microplate.allInstances()->size()]
+    [assay.name <> Undefined]
+    [i.id <> Undefined]
+){
+    
+}checkTarget(
+    jc: JobCollection
+    mp: Microplate
+    ij1: IncubateJob
+
+    (jc, mp): LabwareRegistration
+    (jc, ij1): JobRegistration
+
+    [I2MP.allInstances()->exists(e | e.i = ij1.i2ij.i and e.mp = mp) = false]
+){
+    ij2: IncubateJob
+    (jc, ij2): JobRegistration
+    (mp, ij2): IncubatePlate
+}checkCorr(
+    (jr, jc) as (jr, jc) in jr2jc:JR2JC
+    (i, ij1) as (i, ij) in i2ij1:I2IJ
+){
+    (i*, ij2) as (i, ij) in i2ij2:I2IJ
+    (i*, mp*) as (i, mp) in i2mp:I2MP
+    I2IJ:
+    [self.ij.protocolStepName = self.i.id]
+    `self.ij.protocolStepName := self.i.id`
+    ``
+    [self.ij.temperature = self.i.temperature]
+    `self.ij.temperature := self.i.temperature`
+    ``
+    [self.ij.duration = self.i.duration]
+    `self.ij.duration := self.i.duration`
+    ``
+}
+end
+
+
+rule WashJob_New
+checkSource(
+    jr: JobRequest
+    assay: Assay
+    w: Wash
+    i: Incubate
+
+    (jr, assay): AssayRegistration
+    (assay, w): Steps
+    (assay, i): Steps
+    (i, w): TraceStep
+
+    [S2MP.allInstances()->size() = Sample.allInstances()->size()]
+    [w.w2wj.wj->size() < Microplate.allInstances()->size()]
+
+    [assay.name <> Undefined]
+    [w.id <> Undefined]
+    [i.id <> Undefined]
+    
+){
+    
+}checkTarget(
+    jc: JobCollection
+    mp: Microplate
+    ij: IncubateJob
+    (jc, mp): LabwareRegistration
+    (jc, ij): JobRegistration
+    (mp, ij): IncubatePlate
+
+    [ij.next->size() = 0]
+){
+    wj: WashJob
+    (jc, wj): JobRegistration
+    (mp, wj): WashPlate
+    (ij, wj): TraceJob
+}checkCorr(
+    (jr, jc) as (jr, jc) in jr2jc:JR2JC
+    (i, ij) as (i, ij) in i2ij:I2IJ
+){
+    (w*, wj) as (w, wj) in w2wj:W2WJ
+    W2WJ:
+    [self.wj.protocolStepName = self.w.id]
+    `self.wj.protocolStepName := self.w.id`
+    `self.w.id := self.wj.protocolStepName`
+    [not (self.wj.cavities = Undefined)]
+    `self.wj.cavities := (let l = self.wj.tPlateW.s2mp.s.sampleID in self.wj.jc.convertCavity(l))`
+    ``
+}
+end
+
+
+rule AddReagent_New
+checkSource(
+    jr: JobRequest
+    assay: Assay
+    ar: AddReagent
+    r: Reagent
+    s: Sample
+
+    (jr, assay): AssayRegistration
+    (assay, ar): Steps
+    (assay, r): Reagents
+    (r, ar): UsedReagentType
+
+    [ar.ar2ltj.ltj.tips->size() <> Sample.allInstances()->size()]
+    [ar.ar2ltj.ltj.tips->size() + 1 = s.getId()]
+    [ar.ar2ltj.ltj.tips->size().mod(8) = 0]
+
+    --[assay.name <> Undefined]
+    --[ar.id <> Undefined]
+    --[s.sampleID <> Undefined]
+    --[s.state = SampleState::Waiting]
+    --[r.name <> Undefined]
+
+){
+
+}checkTarget(
+    jc: JobCollection
+    mp: Microplate
+    t: Trough
+
+    (jc, mp): LabwareRegistration
+    (jc, t): LabwareRegistration
+
+    --[mp.name <> Undefined]
+    --[t.name <> Undefined]
+){
+    ltj: LiquidTransferJob
+    tlt: TipLiquidTransfer
+
+    (jc, ltj): JobRegistration
+    (t, ltj): SrcTransfer
+    (mp, ltj): TrgTransfer
+    (ltj, tlt): Tips
+    
+}checkCorr(
+    (jr, jc) as (jr, jc) in jr2jc:JR2JC
+    (s, mp) as (s, mp) in s2mp:S2MP
+    (r, t) as (r, t) in r2t:R2T
+){
+    (s*, tlt) as (s, tlt) in ar2tlt:AR2TLT
+    (ar*, ltj) as (ar, ltj) in ar2ltj:AR2LTJ
+    AR2TLT: 
+    [true = true]
+    `self.tlt.targetCavityIndex := self.s.getPlateIndex()`
+    ``
+    [true = true]
+    `self.tlt.volume := self.tlt.pJob.ar2ltj.ar.volume`
+    ``
+    AR2LTJ: 
+    [true = true]
+    `self.ltj.protocolStepName := self.ar.id`
+    ``
+}
+end
+
+rule AddReagent_Exist
+checkSource(
+    jr: JobRequest
+    assay: Assay
+    ar: AddReagent
+    r: Reagent
+    s: Sample
+
+    (jr, assay): AssayRegistration
+    (assay, ar): Steps
+    (assay, r): Reagents
+    (r, ar): UsedReagentType
+
+
+    [ar.ar2ltj.ltj.tips->size() <> Sample.allInstances()->size()]
+    [ar.ar2ltj.ltj.tips->size() + 1 = s.getId()]
+    [ar.ar2ltj.ltj.tips->size().mod(8) <> 0]
+
+    --[assay.name <> Undefined]
+    --[ar.id <> Undefined]
+    --[s.sampleID <> Undefined]
+    --[s.state = SampleState::Waiting]
+    --[r.name <> Undefined]
+){
+
+}checkTarget(
+    jc: JobCollection
+    mp: Microplate
+    t: Trough
+    ltj: LiquidTransferJob
+
+    (jc, mp): LabwareRegistration
+    (jc, t): LabwareRegistration
+    (jc, ltj): JobRegistration
+    (t, ltj): SrcTransfer
+    (mp, ltj): TrgTransfer
+    
+
+    [ltj.tips->size() < 8]
+
+    --[mp.name <> Undefined]
+    --[t.name <> Undefined]
+){
+    
+    tlt: TipLiquidTransfer
+    (ltj, tlt): Tips
+    
+}checkCorr(
+    (jr, jc) as (jr, jc) in jr2jc:JR2JC
+    (s, mp) as (s, mp) in s2mp:S2MP
+    (r, t) as (r, t) in r2t:R2T
+    (ar, ltj) as (ar, ltj) in ar2ltj:AR2LTJ
+){
+    (s*, tlt) as (s, tlt) in ar2tlt:AR2TLT
+    AR2TLT: 
+    [true = true]
+    `self.tlt.targetCavityIndex := self.s.getPlateIndex()`
+    ``
+    [true = true]
+    `self.tlt.volume := self.tlt.pJob.ar2ltj.ar.volume`
+    ``
+}
+end
+
+
+rule Distribute_IncubateJob
+checkSource(
+    jr: JobRequest
+    assay: Assay
+    ds: DistributeSample
+    i: Incubate
+
+    (jr, assay): AssayRegistration
+    (assay, ds): Steps
+    (assay, i): Steps
+    (ds, i): TraceStep
+
+    [ds.ds2ltj.ltj.next->size() <> ds.ds2ltj.ltj->size()]
+    [assay.name <> Undefined]
+    [ds.id <> Undefined]
+    [i.id <> Undefined]
+){
+    
+}checkTarget(
+    jc: JobCollection
+    mp: Microplate
+    ltj: LiquidTransferJob
+    ij: IncubateJob
+
+    (jc, mp): LabwareRegistration
+    (jc, ltj): JobRegistration
+    (jc, ij): JobRegistration
+    (mp, ltj): TrgTransfer
+    (mp, ij): IncubatePlate
+    
+
+    [ltj.next->size() = 0]
+){
+    (ltj, ij): TraceJob
+
+}checkCorr(
+    (jr, jc) as (jr, jc) in jr2jc:JR2JC
+    (ds, ltj) as (ds, ltj) in ds2ltj:DS2LTJ
+    (i, ij) as (i, ij) in i2ij:I2IJ
+){
+}
+end
+
+
+rule AddReagent_IncubateJob
+checkSource(
+    jr: JobRequest
+    assay: Assay
+    i: Incubate
+    ar: AddReagent
+
+    (jr, assay): AssayRegistration
+    (assay, i): Steps
+    (assay, ar): Steps
+    (ar, i): TraceStep
+
+    [ar.ar2ltj.ltj.next->size() <> ar.ar2ltj.ltj->size()]
+    [assay.name <> Undefined]
+    [i.id <> Undefined]
+    [ar.id <> Undefined]
+){
+    
+}checkTarget(
+    jc: JobCollection
+    mp: Microplate
+    ltj: LiquidTransferJob
+    ij: IncubateJob
+
+    (jc, mp): LabwareRegistration
+    (jc, ltj): JobRegistration
+    (jc, ij): JobRegistration
+    (mp, ltj): TrgTransfer
+    (mp, ij): IncubatePlate
+    
+
+    [ltj.next->size() = 0]
+){
+    (ltj, ij): TraceJob
+}checkCorr(
+    (jr, jc) as (jr, jc) in jr2jc:JR2JC
+    (ar, ltj) as (ar, ltj) in ar2ltj:AR2LTJ
+    (i, ij) as (i, ij) in i2ij:I2IJ
+){
+}
+end
+
+
+rule WashJob_AddReagent
+checkSource(
+    jr: JobRequest
+    assay: Assay
+    w: Wash
+    ar: AddReagent
+
+    (jr, assay): AssayRegistration
+    (assay, w): Steps
+    (assay, ar): Steps
+    (w, ar): TraceStep
+
+    [w.w2wj.wj.next->size() <> ar.ar2ltj.ltj->size()]
+    [assay.name <> Undefined]
+    [w.id <> Undefined]
+    [ar.id <> Undefined]
+){
+    
+}checkTarget(
+    jc: JobCollection
+    mp: Microplate
+    ltj: LiquidTransferJob
+    wj: WashJob
+
+    (jc, mp): LabwareRegistration
+    (jc, ltj): JobRegistration
+    (jc, wj): JobRegistration
+    (mp, ltj): TrgTransfer
+    (mp, wj): WashPlate
+    
+
+    [ltj.previous->size() = 0]
+){
+    (wj, ltj): TraceJob
+}checkCorr(
+    (jr, jc) as (jr, jc) in jr2jc:JR2JC
+    (ar, ltj) as (ar, ltj) in ar2ltj:AR2LTJ
+    (w, wj) as (w, wj) in w2wj:W2WJ
+){
+}
+end
+
+
+rule Incubate_Distribute
+checkSource(
+    jr: JobRequest
+    assay: Assay
+    i: Incubate
+    ds: DistributeSample
+
+    (jr, assay): AssayRegistration
+    (assay, i): Steps
+    (assay, ds): Steps
+    (i, ds): TraceStep
+
+    [i.i2ij.ij.next->size() <> ds.ds2ltj.ltj->size()]
+    [assay.name <> Undefined]
+    [i.id <> Undefined]
+    [ds.id <> Undefined]
+){
+    
+}checkTarget(
+    jc: JobCollection
+    mp: Microplate
+    ltj: LiquidTransferJob
+    ij: IncubateJob
+
+    (jc, mp): LabwareRegistration
+    (jc, ltj): JobRegistration
+    (jc, ij): JobRegistration
+    (mp, ltj): TrgTransfer
+    (mp, ij): IncubatePlate
+    
+
+    [ltj.previous->size() = 0]
+){
+    (ij, ltj): TraceJob
+}checkCorr(
+    (jr, jc) as (jr, jc) in jr2jc:JR2JC
+    (ds, ltj) as (ds, ltj) in ds2ltj:DS2LTJ
+    (i, ij) as (i, ij) in i2ij:I2IJ
+){
+}
+end

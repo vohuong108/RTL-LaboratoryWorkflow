@@ -15,6 +15,22 @@
 !s7.sampleID := 'Sample0007'
 !new Sample('s8')
 !s8.sampleID := 'Sample0008'
+!new Sample('s9')
+!s9.sampleID := 'Sample0009'
+!new Sample('s10')
+!s10.sampleID := 'Sample0010'
+!new Sample('s11')
+!s11.sampleID := 'Sample0011'
+!new Sample('s12')
+!s12.sampleID := 'Sample0012'
+!new Sample('s13')
+!s13.sampleID := 'Sample0013'
+!new Sample('s14')
+!s14.sampleID := 'Sample0014'
+!new Sample('s15')
+!s15.sampleID := 'Sample0015'
+!new Sample('s16')
+!s16.sampleID := 'Sample0016'
 !insert (jr, s1) into SampleRegistration
 !insert (jr, s2) into SampleRegistration
 !insert (jr, s3) into SampleRegistration
@@ -23,6 +39,14 @@
 !insert (jr, s6) into SampleRegistration
 !insert (jr, s7) into SampleRegistration
 !insert (jr, s8) into SampleRegistration
+!insert (jr, s9) into SampleRegistration
+!insert (jr, s10) into SampleRegistration
+!insert (jr, s11) into SampleRegistration
+!insert (jr, s12) into SampleRegistration
+!insert (jr, s13) into SampleRegistration
+!insert (jr, s14) into SampleRegistration
+!insert (jr, s15) into SampleRegistration
+!insert (jr, s16) into SampleRegistration
 !new Assay('assay')
 !assay.name := 'AbstractElisa'
 !new DistributeSample('ds')

@@ -1,0 +1,148 @@
+!new JobRequest('jr')
+!new Sample('s1')
+!s1.sampleID := 'Sample0001'
+!new Sample('s2')
+!s2.sampleID := 'Sample0002'
+!new Sample('s3')
+!s3.sampleID := 'Sample0003'
+!new Sample('s4')
+!s4.sampleID := 'Sample0004'
+!new Sample('s5')
+!s5.sampleID := 'Sample0005'
+!new Sample('s6')
+!s6.sampleID := 'Sample0006'
+!new Sample('s7')
+!s7.sampleID := 'Sample0007'
+!new Sample('s8')
+!s8.sampleID := 'Sample0008'
+!new Sample('s9')
+!s9.sampleID := 'Sample0009'
+!new Sample('s10')
+!s10.sampleID := 'Sample0010'
+!new Sample('s11')
+!s11.sampleID := 'Sample0011'
+!new Sample('s12')
+!s12.sampleID := 'Sample0012'
+!new Sample('s13')
+!s13.sampleID := 'Sample0013'
+!new Sample('s14')
+!s14.sampleID := 'Sample0014'
+!new Sample('s15')
+!s15.sampleID := 'Sample0015'
+!new Sample('s16')
+!s16.sampleID := 'Sample0016'
+!new Sample('s17')
+!s17.sampleID := 'Sample0017'
+!new Sample('s18')
+!s18.sampleID := 'Sample0018'
+!new Sample('s19')
+!s19.sampleID := 'Sample0019'
+!new Sample('s20')
+!s20.sampleID := 'Sample0020'
+!new Sample('s21')
+!s21.sampleID := 'Sample0021'
+!new Sample('s22')
+!s22.sampleID := 'Sample0022'
+!new Sample('s23')
+!s23.sampleID := 'Sample0023'
+!new Sample('s24')
+!s24.sampleID := 'Sample0024'
+!new Sample('s25')
+!s25.sampleID := 'Sample0025'
+!new Sample('s26')
+!s26.sampleID := 'Sample0026'
+!new Sample('s27')
+!s27.sampleID := 'Sample0027'
+!new Sample('s28')
+!s28.sampleID := 'Sample0028'
+!new Sample('s29')
+!s29.sampleID := 'Sample0029'
+!new Sample('s30')
+!s30.sampleID := 'Sample0030'
+!new Sample('s31')
+!s31.sampleID := 'Sample0031'
+!new Sample('s32')
+!s32.sampleID := 'Sample0032'
+!insert (jr, s1) into SampleRegistration
+!insert (jr, s2) into SampleRegistration
+!insert (jr, s3) into SampleRegistration
+!insert (jr, s4) into SampleRegistration
+!insert (jr, s5) into SampleRegistration
+!insert (jr, s6) into SampleRegistration
+!insert (jr, s7) into SampleRegistration
+!insert (jr, s8) into SampleRegistration
+!insert (jr, s9) into SampleRegistration
+!insert (jr, s10) into SampleRegistration
+!insert (jr, s11) into SampleRegistration
+!insert (jr, s12) into SampleRegistration
+!insert (jr, s13) into SampleRegistration
+!insert (jr, s14) into SampleRegistration
+!insert (jr, s15) into SampleRegistration
+!insert (jr, s16) into SampleRegistration
+!insert (jr, s17) into SampleRegistration
+!insert (jr, s18) into SampleRegistration
+!insert (jr, s19) into SampleRegistration
+!insert (jr, s20) into SampleRegistration
+!insert (jr, s21) into SampleRegistration
+!insert (jr, s22) into SampleRegistration
+!insert (jr, s23) into SampleRegistration
+!insert (jr, s24) into SampleRegistration
+!insert (jr, s25) into SampleRegistration
+!insert (jr, s26) into SampleRegistration
+!insert (jr, s27) into SampleRegistration
+!insert (jr, s28) into SampleRegistration
+!insert (jr, s29) into SampleRegistration
+!insert (jr, s30) into SampleRegistration
+!insert (jr, s31) into SampleRegistration
+!insert (jr, s32) into SampleRegistration
+!new Assay('assay')
+!assay.name := 'AbstractElisa'
+!new DistributeSample('ds')
+!ds.id := 'AddSample'
+!ds.volume := 100
+!new Incubate('i1')
+!i1.id := 'BindAntibodies'
+!i1.temperature := 310.15
+!i1.duration := 40
+!new Wash('w1')
+!w1.id := 'WashAfterAntibodiesBound'
+!new AddReagent('ar1')
+!ar1.id := 'AddConjugate'
+!ar1.volume := 100
+!new Incubate('i2')
+!i2.id := 'BindConjugate'
+!i2.temperature := 310.15
+!i2.duration := 40
+!new Wash('w2')
+!w2.id := 'WashConjugate'
+!new AddReagent('ar2')
+!ar2.id := 'AddSubstrate'
+!ar2.volume := 100
+!new Incubate('i3')
+!i3.id := 'WaitForColorReaction'
+!i3.temperature := 293.15
+!i3.duration := 20
+!new Reagent('r1')
+!r1.name := 'Conjugate'
+!new Reagent('r2')
+!r2.name := 'Substrate'
+!insert (jr, assay) into AssayRegistration
+!insert (assay, ds) into Steps
+!insert (assay, i1) into Steps
+!insert (assay, i2) into Steps
+!insert (assay, i3) into Steps
+!insert (assay, w1) into Steps
+!insert (assay, w2) into Steps
+!insert (assay, ar1) into Steps
+!insert (assay, ar2) into Steps
+!insert (assay, r1) into Reagents
+!insert (assay, r2) into Reagents
+!insert (r1, ar1) into UsedReagentType
+!insert (r2, ar2) into UsedReagentType
+!insert (ds, i1) into TraceStep
+!insert (i1, w1) into TraceStep
+!insert (w1, ar1) into TraceStep
+!insert (ar1, i2) into TraceStep
+!insert (i2, w2) into TraceStep
+!insert (w2, ar2) into TraceStep
+!insert (ar2, i3) into TraceStep

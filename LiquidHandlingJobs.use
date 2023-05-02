@@ -1,13 +1,14 @@
 model LiquidHandlingJobs
 
-
 enum JobStatus {Planned, Executing, Succeeded, Failed}
 
 class JobCollection
 operations
-	convertJobEnum(status: JobStatus): Integer = if status = JobStatus::Planned then 1 else 4 endif
-	convertBarcodes(list: Sequence(String)): String = list->asOrderedSet()->iterate(i; acc: String = '' | if i <> '' then acc + i + ' ' else acc endif)
-	convertCavity(list: Bag(String)): String = list->collect(i | i.substring(7, i.size()).toInteger())->sortedBy(i | i)->iterate(i; acc: String = '' | acc + i.toString() + ' ')
+	convertJobEnum(status: JobStatus): Integer = (if status = JobStatus::Planned then 1 else 4 endif)
+	convertBarcodes(list: Sequence(String)): String = (list->asOrderedSet()->iterate(i; acc: String = '' | if i <> '' then acc + i + ' ' else acc endif))
+	convertCavity(list: Bag(String)): String = (list->collect(i | i.substring(7, i.size()).toInteger())->sortedBy(i | i)->iterate(i; acc: String = '' | acc + i.toString() + ' '))
+	--v4
+	genBarcodes(a: Integer, b: Integer): String = (Sequence{(a+1)..b}->iterate(i; acc: String = 'Sample' + a.toString() | acc + ' ' + 'Sample' + i.toString()))
 end
 
 abstract class Job
@@ -61,8 +62,6 @@ end
 
 class Microplate < Labware
 operations
-	--getSampleValid(): Collection(Integer) = self.s2mp.s->select(i | i.state <> SampleState::Error)->collect(i | i.sampleID.substring(7, --i.sampleID.size()).toInteger())
-	--getSampleValidString(): String = let l = self.getSampleValid() in l->sortedBy(i | i)->iterate(i; acc: String = '' | acc.concat(i.toString() + --' '))
 end
 
 class Trough < Labware

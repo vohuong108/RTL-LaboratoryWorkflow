@@ -1,4 +1,13 @@
 !new JobRequest('jr')
+!new Assay('assay')
+!assay.name := 'AbstractElisa'
+!insert (jr, assay) into AssayRegistration
+!new Reagent('r1')
+!r1.name := 'Conjugate'
+!new Reagent('r2')
+!r2.name := 'Substrate'
+!insert (assay, r1) into Reagents
+!insert (assay, r2) into Reagents
 !new Sample('s1')
 !s1.sampleID := 'Sample0001'
 !new Sample('s2')
@@ -23,54 +32,45 @@
 !insert (jr, s6) into SampleRegistration
 !insert (jr, s7) into SampleRegistration
 !insert (jr, s8) into SampleRegistration
-!new Assay('assay')
-!assay.name := 'AbstractElisa'
-!new DistributeSample('ds')
-!ds.id := 'AddSample'
-!ds.volume := 100
+!new DistributeSample('ds1')
+!ds1.id := 'AddSample'
+!ds1.volume := 100
+!insert (assay, ds1) into Steps
 !new Incubate('i1')
 !i1.id := 'BindAntibodies'
 !i1.temperature := 310.15
 !i1.duration := 40
+!insert (assay, i1) into Steps
+!insert (ds1, i1) into TraceStep
 !new Wash('w1')
 !w1.id := 'WashAfterAntibodiesBound'
+!insert (assay, w1) into Steps
+!insert (i1, w1) into TraceStep
 !new AddReagent('ar1')
 !ar1.id := 'AddConjugate'
 !ar1.volume := 100
+!insert (assay, ar1) into Steps
+!insert (w1, ar1) into TraceStep
+!insert (r1, ar1) into UsedReagentType
 !new Incubate('i2')
 !i2.id := 'BindConjugate'
 !i2.temperature := 310.15
 !i2.duration := 40
+!insert (assay, i2) into Steps
+!insert (ar1, i2) into TraceStep
 !new Wash('w2')
 !w2.id := 'WashConjugate'
+!insert (assay, w2) into Steps
+!insert (i2, w2) into TraceStep
 !new AddReagent('ar2')
 !ar2.id := 'AddSubstrate'
 !ar2.volume := 100
+!insert (assay, ar2) into Steps
+!insert (w2, ar2) into TraceStep
+!insert (r2, ar2) into UsedReagentType
 !new Incubate('i3')
 !i3.id := 'WaitForColorReaction'
-!i3.temperature := 293.15
-!i3.duration := 20
-!new Reagent('r1')
-!r1.name := 'Conjugate'
-!new Reagent('r2')
-!r2.name := 'Substrate'
-!insert (jr, assay) into AssayRegistration
-!insert (assay, ds) into Steps
-!insert (assay, i1) into Steps
-!insert (assay, i2) into Steps
+!i3.temperature := 310.15
+!i3.duration := 40
 !insert (assay, i3) into Steps
-!insert (assay, w1) into Steps
-!insert (assay, w2) into Steps
-!insert (assay, ar1) into Steps
-!insert (assay, ar2) into Steps
-!insert (assay, r1) into Reagents
-!insert (assay, r2) into Reagents
-!insert (r1, ar1) into UsedReagentType
-!insert (r2, ar2) into UsedReagentType
-!insert (ds, i1) into TraceStep
-!insert (i1, w1) into TraceStep
-!insert (w1, ar1) into TraceStep
-!insert (ar1, i2) into TraceStep
-!insert (i2, w2) into TraceStep
-!insert (w2, ar2) into TraceStep
 !insert (ar2, i3) into TraceStep

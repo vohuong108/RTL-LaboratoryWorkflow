@@ -1,0 +1,244 @@
+!new JobRequest('jr')
+!new Sample('s1')
+!s1.sampleID := 'Sample0001'
+!new Sample('s2')
+!s2.sampleID := 'Sample0002'
+!new Sample('s3')
+!s3.sampleID := 'Sample0003'
+!new Sample('s4')
+!s4.sampleID := 'Sample0004'
+!new Sample('s5')
+!s5.sampleID := 'Sample0005'
+!new Sample('s6')
+!s6.sampleID := 'Sample0006'
+!new Sample('s7')
+!s7.sampleID := 'Sample0007'
+!new Sample('s8')
+!s8.sampleID := 'Sample0008'
+!new Sample('s9')
+!s9.sampleID := 'Sample0009'
+!new Sample('s10')
+!s10.sampleID := 'Sample0010'
+!new Sample('s11')
+!s11.sampleID := 'Sample0011'
+!new Sample('s12')
+!s12.sampleID := 'Sample0012'
+!new Sample('s13')
+!s13.sampleID := 'Sample0013'
+!new Sample('s14')
+!s14.sampleID := 'Sample0014'
+!new Sample('s15')
+!s15.sampleID := 'Sample0015'
+!new Sample('s16')
+!s16.sampleID := 'Sample0016'
+!new Sample('s17')
+!s17.sampleID := 'Sample0017'
+!new Sample('s18')
+!s18.sampleID := 'Sample0018'
+!new Sample('s19')
+!s19.sampleID := 'Sample0019'
+!new Sample('s20')
+!s20.sampleID := 'Sample0020'
+!new Sample('s21')
+!s21.sampleID := 'Sample0021'
+!new Sample('s22')
+!s22.sampleID := 'Sample0022'
+!new Sample('s23')
+!s23.sampleID := 'Sample0023'
+!new Sample('s24')
+!s24.sampleID := 'Sample0024'
+!new Sample('s25')
+!s25.sampleID := 'Sample0025'
+!new Sample('s26')
+!s26.sampleID := 'Sample0026'
+!new Sample('s27')
+!s27.sampleID := 'Sample0027'
+!new Sample('s28')
+!s28.sampleID := 'Sample0028'
+!new Sample('s29')
+!s29.sampleID := 'Sample0029'
+!new Sample('s30')
+!s30.sampleID := 'Sample0030'
+!new Sample('s31')
+!s31.sampleID := 'Sample0031'
+!new Sample('s32')
+!s32.sampleID := 'Sample0032'
+!new Sample('s33')
+!s33.sampleID := 'Sample0033'
+!new Sample('s34')
+!s34.sampleID := 'Sample0034'
+!new Sample('s35')
+!s35.sampleID := 'Sample0035'
+!new Sample('s36')
+!s36.sampleID := 'Sample0036'
+!new Sample('s37')
+!s37.sampleID := 'Sample0037'
+!new Sample('s38')
+!s38.sampleID := 'Sample0038'
+!new Sample('s39')
+!s39.sampleID := 'Sample0039'
+!new Sample('s40')
+!s40.sampleID := 'Sample0040'
+!new Sample('s41')
+!s41.sampleID := 'Sample0041'
+!new Sample('s42')
+!s42.sampleID := 'Sample0042'
+!new Sample('s43')
+!s43.sampleID := 'Sample0043'
+!new Sample('s44')
+!s44.sampleID := 'Sample0044'
+!new Sample('s45')
+!s45.sampleID := 'Sample0045'
+!new Sample('s46')
+!s46.sampleID := 'Sample0046'
+!new Sample('s47')
+!s47.sampleID := 'Sample0047'
+!new Sample('s48')
+!s48.sampleID := 'Sample0048'
+!new Sample('s49')
+!s49.sampleID := 'Sample0049'
+!new Sample('s50')
+!s50.sampleID := 'Sample0050'
+!new Sample('s51')
+!s51.sampleID := 'Sample0051'
+!new Sample('s52')
+!s52.sampleID := 'Sample0052'
+!new Sample('s53')
+!s53.sampleID := 'Sample0053'
+!new Sample('s54')
+!s54.sampleID := 'Sample0054'
+!new Sample('s55')
+!s55.sampleID := 'Sample0055'
+!new Sample('s56')
+!s56.sampleID := 'Sample0056'
+!new Sample('s57')
+!s57.sampleID := 'Sample0057'
+!new Sample('s58')
+!s58.sampleID := 'Sample0058'
+!new Sample('s59')
+!s59.sampleID := 'Sample0059'
+!new Sample('s60')
+!s60.sampleID := 'Sample0060'
+!new Sample('s61')
+!s61.sampleID := 'Sample0061'
+!new Sample('s62')
+!s62.sampleID := 'Sample0062'
+!new Sample('s63')
+!s63.sampleID := 'Sample0063'
+!new Sample('s64')
+!s64.sampleID := 'Sample0064'
+!insert (jr, s1) into SampleRegistration
+!insert (jr, s2) into SampleRegistration
+!insert (jr, s3) into SampleRegistration
+!insert (jr, s4) into SampleRegistration
+!insert (jr, s5) into SampleRegistration
+!insert (jr, s6) into SampleRegistration
+!insert (jr, s7) into SampleRegistration
+!insert (jr, s8) into SampleRegistration
+!insert (jr, s9) into SampleRegistration
+!insert (jr, s10) into SampleRegistration
+!insert (jr, s11) into SampleRegistration
+!insert (jr, s12) into SampleRegistration
+!insert (jr, s13) into SampleRegistration
+!insert (jr, s14) into SampleRegistration
+!insert (jr, s15) into SampleRegistration
+!insert (jr, s16) into SampleRegistration
+!insert (jr, s17) into SampleRegistration
+!insert (jr, s18) into SampleRegistration
+!insert (jr, s19) into SampleRegistration
+!insert (jr, s20) into SampleRegistration
+!insert (jr, s21) into SampleRegistration
+!insert (jr, s22) into SampleRegistration
+!insert (jr, s23) into SampleRegistration
+!insert (jr, s24) into SampleRegistration
+!insert (jr, s25) into SampleRegistration
+!insert (jr, s26) into SampleRegistration
+!insert (jr, s27) into SampleRegistration
+!insert (jr, s28) into SampleRegistration
+!insert (jr, s29) into SampleRegistration
+!insert (jr, s30) into SampleRegistration
+!insert (jr, s31) into SampleRegistration
+!insert (jr, s32) into SampleRegistration
+!insert (jr, s33) into SampleRegistration
+!insert (jr, s34) into SampleRegistration
+!insert (jr, s35) into SampleRegistration
+!insert (jr, s36) into SampleRegistration
+!insert (jr, s37) into SampleRegistration
+!insert (jr, s38) into SampleRegistration
+!insert (jr, s39) into SampleRegistration
+!insert (jr, s40) into SampleRegistration
+!insert (jr, s41) into SampleRegistration
+!insert (jr, s42) into SampleRegistration
+!insert (jr, s43) into SampleRegistration
+!insert (jr, s44) into SampleRegistration
+!insert (jr, s45) into SampleRegistration
+!insert (jr, s46) into SampleRegistration
+!insert (jr, s47) into SampleRegistration
+!insert (jr, s48) into SampleRegistration
+!insert (jr, s49) into SampleRegistration
+!insert (jr, s50) into SampleRegistration
+!insert (jr, s51) into SampleRegistration
+!insert (jr, s52) into SampleRegistration
+!insert (jr, s53) into SampleRegistration
+!insert (jr, s54) into SampleRegistration
+!insert (jr, s55) into SampleRegistration
+!insert (jr, s56) into SampleRegistration
+!insert (jr, s57) into SampleRegistration
+!insert (jr, s58) into SampleRegistration
+!insert (jr, s59) into SampleRegistration
+!insert (jr, s60) into SampleRegistration
+!insert (jr, s61) into SampleRegistration
+!insert (jr, s62) into SampleRegistration
+!insert (jr, s63) into SampleRegistration
+!insert (jr, s64) into SampleRegistration
+!new Assay('assay')
+!assay.name := 'AbstractElisa'
+!new DistributeSample('ds')
+!ds.id := 'AddSample'
+!ds.volume := 100
+!new Incubate('i1')
+!i1.id := 'BindAntibodies'
+!i1.temperature := 310.15
+!i1.duration := 40
+!new Wash('w1')
+!w1.id := 'WashAfterAntibodiesBound'
+!new AddReagent('ar1')
+!ar1.id := 'AddConjugate'
+!ar1.volume := 100
+!new Incubate('i2')
+!i2.id := 'BindConjugate'
+!i2.temperature := 310.15
+!i2.duration := 40
+!new Wash('w2')
+!w2.id := 'WashConjugate'
+!new AddReagent('ar2')
+!ar2.id := 'AddSubstrate'
+!ar2.volume := 100
+!new Incubate('i3')
+!i3.id := 'WaitForColorReaction'
+!i3.temperature := 293.15
+!i3.duration := 20
+!new Reagent('r1')
+!r1.name := 'Conjugate'
+!new Reagent('r2')
+!r2.name := 'Substrate'
+!insert (jr, assay) into AssayRegistration
+!insert (assay, ds) into Steps
+!insert (assay, i1) into Steps
+!insert (assay, i2) into Steps
+!insert (assay, i3) into Steps
+!insert (assay, w1) into Steps
+!insert (assay, w2) into Steps
+!insert (assay, ar1) into Steps
+!insert (assay, ar2) into Steps
+!insert (assay, r1) into Reagents
+!insert (assay, r2) into Reagents
+!insert (r1, ar1) into UsedReagentType
+!insert (r2, ar2) into UsedReagentType
+!insert (ds, i1) into TraceStep
+!insert (i1, w1) into TraceStep
+!insert (w1, ar1) into TraceStep
+!insert (ar1, i2) into TraceStep
+!insert (i2, w2) into TraceStep
+!insert (w2, ar2) into TraceStep
+!insert (ar2, i3) into TraceStep

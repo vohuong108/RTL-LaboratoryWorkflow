@@ -1,0 +1,1588 @@
+!new JobRequest('jr')
+!new Sample('s1')
+!s1.sampleID := 'Sample0001'
+!new Sample('s2')
+!s2.sampleID := 'Sample0002'
+!new Sample('s3')
+!s3.sampleID := 'Sample0003'
+!new Sample('s4')
+!s4.sampleID := 'Sample0004'
+!new Sample('s5')
+!s5.sampleID := 'Sample0005'
+!new Sample('s6')
+!s6.sampleID := 'Sample0006'
+!new Sample('s7')
+!s7.sampleID := 'Sample0007'
+!new Sample('s8')
+!s8.sampleID := 'Sample0008'
+!new Sample('s9')
+!s9.sampleID := 'Sample0009'
+!new Sample('s10')
+!s10.sampleID := 'Sample0010'
+!new Sample('s11')
+!s11.sampleID := 'Sample0011'
+!new Sample('s12')
+!s12.sampleID := 'Sample0012'
+!new Sample('s13')
+!s13.sampleID := 'Sample0013'
+!new Sample('s14')
+!s14.sampleID := 'Sample0014'
+!new Sample('s15')
+!s15.sampleID := 'Sample0015'
+!new Sample('s16')
+!s16.sampleID := 'Sample0016'
+!new Sample('s17')
+!s17.sampleID := 'Sample0017'
+!new Sample('s18')
+!s18.sampleID := 'Sample0018'
+!new Sample('s19')
+!s19.sampleID := 'Sample0019'
+!new Sample('s20')
+!s20.sampleID := 'Sample0020'
+!new Sample('s21')
+!s21.sampleID := 'Sample0021'
+!new Sample('s22')
+!s22.sampleID := 'Sample0022'
+!new Sample('s23')
+!s23.sampleID := 'Sample0023'
+!new Sample('s24')
+!s24.sampleID := 'Sample0024'
+!new Sample('s25')
+!s25.sampleID := 'Sample0025'
+!new Sample('s26')
+!s26.sampleID := 'Sample0026'
+!new Sample('s27')
+!s27.sampleID := 'Sample0027'
+!new Sample('s28')
+!s28.sampleID := 'Sample0028'
+!new Sample('s29')
+!s29.sampleID := 'Sample0029'
+!new Sample('s30')
+!s30.sampleID := 'Sample0030'
+!new Sample('s31')
+!s31.sampleID := 'Sample0031'
+!new Sample('s32')
+!s32.sampleID := 'Sample0032'
+!new Sample('s33')
+!s33.sampleID := 'Sample0033'
+!new Sample('s34')
+!s34.sampleID := 'Sample0034'
+!new Sample('s35')
+!s35.sampleID := 'Sample0035'
+!new Sample('s36')
+!s36.sampleID := 'Sample0036'
+!new Sample('s37')
+!s37.sampleID := 'Sample0037'
+!new Sample('s38')
+!s38.sampleID := 'Sample0038'
+!new Sample('s39')
+!s39.sampleID := 'Sample0039'
+!new Sample('s40')
+!s40.sampleID := 'Sample0040'
+!new Sample('s41')
+!s41.sampleID := 'Sample0041'
+!new Sample('s42')
+!s42.sampleID := 'Sample0042'
+!new Sample('s43')
+!s43.sampleID := 'Sample0043'
+!new Sample('s44')
+!s44.sampleID := 'Sample0044'
+!new Sample('s45')
+!s45.sampleID := 'Sample0045'
+!new Sample('s46')
+!s46.sampleID := 'Sample0046'
+!new Sample('s47')
+!s47.sampleID := 'Sample0047'
+!new Sample('s48')
+!s48.sampleID := 'Sample0048'
+!new Sample('s49')
+!s49.sampleID := 'Sample0049'
+!new Sample('s50')
+!s50.sampleID := 'Sample0050'
+!new Sample('s51')
+!s51.sampleID := 'Sample0051'
+!new Sample('s52')
+!s52.sampleID := 'Sample0052'
+!new Sample('s53')
+!s53.sampleID := 'Sample0053'
+!new Sample('s54')
+!s54.sampleID := 'Sample0054'
+!new Sample('s55')
+!s55.sampleID := 'Sample0055'
+!new Sample('s56')
+!s56.sampleID := 'Sample0056'
+!new Sample('s57')
+!s57.sampleID := 'Sample0057'
+!new Sample('s58')
+!s58.sampleID := 'Sample0058'
+!new Sample('s59')
+!s59.sampleID := 'Sample0059'
+!new Sample('s60')
+!s60.sampleID := 'Sample0060'
+!new Sample('s61')
+!s61.sampleID := 'Sample0061'
+!new Sample('s62')
+!s62.sampleID := 'Sample0062'
+!new Sample('s63')
+!s63.sampleID := 'Sample0063'
+!new Sample('s64')
+!s64.sampleID := 'Sample0064'
+!new Sample('s65')
+!s65.sampleID := 'Sample0065'
+!new Sample('s66')
+!s66.sampleID := 'Sample0066'
+!new Sample('s67')
+!s67.sampleID := 'Sample0067'
+!new Sample('s68')
+!s68.sampleID := 'Sample0068'
+!new Sample('s69')
+!s69.sampleID := 'Sample0069'
+!new Sample('s70')
+!s70.sampleID := 'Sample0070'
+!new Sample('s71')
+!s71.sampleID := 'Sample0071'
+!new Sample('s72')
+!s72.sampleID := 'Sample0072'
+!new Sample('s73')
+!s73.sampleID := 'Sample0073'
+!new Sample('s74')
+!s74.sampleID := 'Sample0074'
+!new Sample('s75')
+!s75.sampleID := 'Sample0075'
+!new Sample('s76')
+!s76.sampleID := 'Sample0076'
+!new Sample('s77')
+!s77.sampleID := 'Sample0077'
+!new Sample('s78')
+!s78.sampleID := 'Sample0078'
+!new Sample('s79')
+!s79.sampleID := 'Sample0079'
+!new Sample('s80')
+!s80.sampleID := 'Sample0080'
+!new Sample('s81')
+!s81.sampleID := 'Sample0081'
+!new Sample('s82')
+!s82.sampleID := 'Sample0082'
+!new Sample('s83')
+!s83.sampleID := 'Sample0083'
+!new Sample('s84')
+!s84.sampleID := 'Sample0084'
+!new Sample('s85')
+!s85.sampleID := 'Sample0085'
+!new Sample('s86')
+!s86.sampleID := 'Sample0086'
+!new Sample('s87')
+!s87.sampleID := 'Sample0087'
+!new Sample('s88')
+!s88.sampleID := 'Sample0088'
+!new Sample('s89')
+!s89.sampleID := 'Sample0089'
+!new Sample('s90')
+!s90.sampleID := 'Sample0090'
+!new Sample('s91')
+!s91.sampleID := 'Sample0091'
+!new Sample('s92')
+!s92.sampleID := 'Sample0092'
+!new Sample('s93')
+!s93.sampleID := 'Sample0093'
+!new Sample('s94')
+!s94.sampleID := 'Sample0094'
+!new Sample('s95')
+!s95.sampleID := 'Sample0095'
+!new Sample('s96')
+!s96.sampleID := 'Sample0096'
+!new Sample('s97')
+!s97.sampleID := 'Sample0097'
+!new Sample('s98')
+!s98.sampleID := 'Sample0098'
+!new Sample('s99')
+!s99.sampleID := 'Sample0099'
+!new Sample('s100')
+!s100.sampleID := 'Sample0100'
+!new Sample('s101')
+!s101.sampleID := 'Sample0101'
+!new Sample('s102')
+!s102.sampleID := 'Sample0102'
+!new Sample('s103')
+!s103.sampleID := 'Sample0103'
+!new Sample('s104')
+!s104.sampleID := 'Sample0104'
+!new Sample('s105')
+!s105.sampleID := 'Sample0105'
+!new Sample('s106')
+!s106.sampleID := 'Sample0106'
+!new Sample('s107')
+!s107.sampleID := 'Sample0107'
+!new Sample('s108')
+!s108.sampleID := 'Sample0108'
+!new Sample('s109')
+!s109.sampleID := 'Sample0109'
+!new Sample('s110')
+!s110.sampleID := 'Sample0110'
+!new Sample('s111')
+!s111.sampleID := 'Sample0111'
+!new Sample('s112')
+!s112.sampleID := 'Sample0112'
+!new Sample('s113')
+!s113.sampleID := 'Sample0113'
+!new Sample('s114')
+!s114.sampleID := 'Sample0114'
+!new Sample('s115')
+!s115.sampleID := 'Sample0115'
+!new Sample('s116')
+!s116.sampleID := 'Sample0116'
+!new Sample('s117')
+!s117.sampleID := 'Sample0117'
+!new Sample('s118')
+!s118.sampleID := 'Sample0118'
+!new Sample('s119')
+!s119.sampleID := 'Sample0119'
+!new Sample('s120')
+!s120.sampleID := 'Sample0120'
+!new Sample('s121')
+!s121.sampleID := 'Sample0121'
+!new Sample('s122')
+!s122.sampleID := 'Sample0122'
+!new Sample('s123')
+!s123.sampleID := 'Sample0123'
+!new Sample('s124')
+!s124.sampleID := 'Sample0124'
+!new Sample('s125')
+!s125.sampleID := 'Sample0125'
+!new Sample('s126')
+!s126.sampleID := 'Sample0126'
+!new Sample('s127')
+!s127.sampleID := 'Sample0127'
+!new Sample('s128')
+!s128.sampleID := 'Sample0128'
+!new Sample('s129')
+!s129.sampleID := 'Sample0129'
+!new Sample('s130')
+!s130.sampleID := 'Sample0130'
+!new Sample('s131')
+!s131.sampleID := 'Sample0131'
+!new Sample('s132')
+!s132.sampleID := 'Sample0132'
+!new Sample('s133')
+!s133.sampleID := 'Sample0133'
+!new Sample('s134')
+!s134.sampleID := 'Sample0134'
+!new Sample('s135')
+!s135.sampleID := 'Sample0135'
+!new Sample('s136')
+!s136.sampleID := 'Sample0136'
+!new Sample('s137')
+!s137.sampleID := 'Sample0137'
+!new Sample('s138')
+!s138.sampleID := 'Sample0138'
+!new Sample('s139')
+!s139.sampleID := 'Sample0139'
+!new Sample('s140')
+!s140.sampleID := 'Sample0140'
+!new Sample('s141')
+!s141.sampleID := 'Sample0141'
+!new Sample('s142')
+!s142.sampleID := 'Sample0142'
+!new Sample('s143')
+!s143.sampleID := 'Sample0143'
+!new Sample('s144')
+!s144.sampleID := 'Sample0144'
+!new Sample('s145')
+!s145.sampleID := 'Sample0145'
+!new Sample('s146')
+!s146.sampleID := 'Sample0146'
+!new Sample('s147')
+!s147.sampleID := 'Sample0147'
+!new Sample('s148')
+!s148.sampleID := 'Sample0148'
+!new Sample('s149')
+!s149.sampleID := 'Sample0149'
+!new Sample('s150')
+!s150.sampleID := 'Sample0150'
+!new Sample('s151')
+!s151.sampleID := 'Sample0151'
+!new Sample('s152')
+!s152.sampleID := 'Sample0152'
+!new Sample('s153')
+!s153.sampleID := 'Sample0153'
+!new Sample('s154')
+!s154.sampleID := 'Sample0154'
+!new Sample('s155')
+!s155.sampleID := 'Sample0155'
+!new Sample('s156')
+!s156.sampleID := 'Sample0156'
+!new Sample('s157')
+!s157.sampleID := 'Sample0157'
+!new Sample('s158')
+!s158.sampleID := 'Sample0158'
+!new Sample('s159')
+!s159.sampleID := 'Sample0159'
+!new Sample('s160')
+!s160.sampleID := 'Sample0160'
+!new Sample('s161')
+!s161.sampleID := 'Sample0161'
+!new Sample('s162')
+!s162.sampleID := 'Sample0162'
+!new Sample('s163')
+!s163.sampleID := 'Sample0163'
+!new Sample('s164')
+!s164.sampleID := 'Sample0164'
+!new Sample('s165')
+!s165.sampleID := 'Sample0165'
+!new Sample('s166')
+!s166.sampleID := 'Sample0166'
+!new Sample('s167')
+!s167.sampleID := 'Sample0167'
+!new Sample('s168')
+!s168.sampleID := 'Sample0168'
+!new Sample('s169')
+!s169.sampleID := 'Sample0169'
+!new Sample('s170')
+!s170.sampleID := 'Sample0170'
+!new Sample('s171')
+!s171.sampleID := 'Sample0171'
+!new Sample('s172')
+!s172.sampleID := 'Sample0172'
+!new Sample('s173')
+!s173.sampleID := 'Sample0173'
+!new Sample('s174')
+!s174.sampleID := 'Sample0174'
+!new Sample('s175')
+!s175.sampleID := 'Sample0175'
+!new Sample('s176')
+!s176.sampleID := 'Sample0176'
+!new Sample('s177')
+!s177.sampleID := 'Sample0177'
+!new Sample('s178')
+!s178.sampleID := 'Sample0178'
+!new Sample('s179')
+!s179.sampleID := 'Sample0179'
+!new Sample('s180')
+!s180.sampleID := 'Sample0180'
+!new Sample('s181')
+!s181.sampleID := 'Sample0181'
+!new Sample('s182')
+!s182.sampleID := 'Sample0182'
+!new Sample('s183')
+!s183.sampleID := 'Sample0183'
+!new Sample('s184')
+!s184.sampleID := 'Sample0184'
+!new Sample('s185')
+!s185.sampleID := 'Sample0185'
+!new Sample('s186')
+!s186.sampleID := 'Sample0186'
+!new Sample('s187')
+!s187.sampleID := 'Sample0187'
+!new Sample('s188')
+!s188.sampleID := 'Sample0188'
+!new Sample('s189')
+!s189.sampleID := 'Sample0189'
+!new Sample('s190')
+!s190.sampleID := 'Sample0190'
+!new Sample('s191')
+!s191.sampleID := 'Sample0191'
+!new Sample('s192')
+!s192.sampleID := 'Sample0192'
+!new Sample('s193')
+!s193.sampleID := 'Sample0193'
+!new Sample('s194')
+!s194.sampleID := 'Sample0194'
+!new Sample('s195')
+!s195.sampleID := 'Sample0195'
+!new Sample('s196')
+!s196.sampleID := 'Sample0196'
+!new Sample('s197')
+!s197.sampleID := 'Sample0197'
+!new Sample('s198')
+!s198.sampleID := 'Sample0198'
+!new Sample('s199')
+!s199.sampleID := 'Sample0199'
+!new Sample('s200')
+!s200.sampleID := 'Sample0200'
+!new Sample('s201')
+!s201.sampleID := 'Sample0201'
+!new Sample('s202')
+!s202.sampleID := 'Sample0202'
+!new Sample('s203')
+!s203.sampleID := 'Sample0203'
+!new Sample('s204')
+!s204.sampleID := 'Sample0204'
+!new Sample('s205')
+!s205.sampleID := 'Sample0205'
+!new Sample('s206')
+!s206.sampleID := 'Sample0206'
+!new Sample('s207')
+!s207.sampleID := 'Sample0207'
+!new Sample('s208')
+!s208.sampleID := 'Sample0208'
+!new Sample('s209')
+!s209.sampleID := 'Sample0209'
+!new Sample('s210')
+!s210.sampleID := 'Sample0210'
+!new Sample('s211')
+!s211.sampleID := 'Sample0211'
+!new Sample('s212')
+!s212.sampleID := 'Sample0212'
+!new Sample('s213')
+!s213.sampleID := 'Sample0213'
+!new Sample('s214')
+!s214.sampleID := 'Sample0214'
+!new Sample('s215')
+!s215.sampleID := 'Sample0215'
+!new Sample('s216')
+!s216.sampleID := 'Sample0216'
+!new Sample('s217')
+!s217.sampleID := 'Sample0217'
+!new Sample('s218')
+!s218.sampleID := 'Sample0218'
+!new Sample('s219')
+!s219.sampleID := 'Sample0219'
+!new Sample('s220')
+!s220.sampleID := 'Sample0220'
+!new Sample('s221')
+!s221.sampleID := 'Sample0221'
+!new Sample('s222')
+!s222.sampleID := 'Sample0222'
+!new Sample('s223')
+!s223.sampleID := 'Sample0223'
+!new Sample('s224')
+!s224.sampleID := 'Sample0224'
+!new Sample('s225')
+!s225.sampleID := 'Sample0225'
+!new Sample('s226')
+!s226.sampleID := 'Sample0226'
+!new Sample('s227')
+!s227.sampleID := 'Sample0227'
+!new Sample('s228')
+!s228.sampleID := 'Sample0228'
+!new Sample('s229')
+!s229.sampleID := 'Sample0229'
+!new Sample('s230')
+!s230.sampleID := 'Sample0230'
+!new Sample('s231')
+!s231.sampleID := 'Sample0231'
+!new Sample('s232')
+!s232.sampleID := 'Sample0232'
+!new Sample('s233')
+!s233.sampleID := 'Sample0233'
+!new Sample('s234')
+!s234.sampleID := 'Sample0234'
+!new Sample('s235')
+!s235.sampleID := 'Sample0235'
+!new Sample('s236')
+!s236.sampleID := 'Sample0236'
+!new Sample('s237')
+!s237.sampleID := 'Sample0237'
+!new Sample('s238')
+!s238.sampleID := 'Sample0238'
+!new Sample('s239')
+!s239.sampleID := 'Sample0239'
+!new Sample('s240')
+!s240.sampleID := 'Sample0240'
+!new Sample('s241')
+!s241.sampleID := 'Sample0241'
+!new Sample('s242')
+!s242.sampleID := 'Sample0242'
+!new Sample('s243')
+!s243.sampleID := 'Sample0243'
+!new Sample('s244')
+!s244.sampleID := 'Sample0244'
+!new Sample('s245')
+!s245.sampleID := 'Sample0245'
+!new Sample('s246')
+!s246.sampleID := 'Sample0246'
+!new Sample('s247')
+!s247.sampleID := 'Sample0247'
+!new Sample('s248')
+!s248.sampleID := 'Sample0248'
+!new Sample('s249')
+!s249.sampleID := 'Sample0249'
+!new Sample('s250')
+!s250.sampleID := 'Sample0250'
+!new Sample('s251')
+!s251.sampleID := 'Sample0251'
+!new Sample('s252')
+!s252.sampleID := 'Sample0252'
+!new Sample('s253')
+!s253.sampleID := 'Sample0253'
+!new Sample('s254')
+!s254.sampleID := 'Sample0254'
+!new Sample('s255')
+!s255.sampleID := 'Sample0255'
+!new Sample('s256')
+!s256.sampleID := 'Sample0256'
+!new Sample('s257')
+!s257.sampleID := 'Sample0257'
+!new Sample('s258')
+!s258.sampleID := 'Sample0258'
+!new Sample('s259')
+!s259.sampleID := 'Sample0259'
+!new Sample('s260')
+!s260.sampleID := 'Sample0260'
+!new Sample('s261')
+!s261.sampleID := 'Sample0261'
+!new Sample('s262')
+!s262.sampleID := 'Sample0262'
+!new Sample('s263')
+!s263.sampleID := 'Sample0263'
+!new Sample('s264')
+!s264.sampleID := 'Sample0264'
+!new Sample('s265')
+!s265.sampleID := 'Sample0265'
+!new Sample('s266')
+!s266.sampleID := 'Sample0266'
+!new Sample('s267')
+!s267.sampleID := 'Sample0267'
+!new Sample('s268')
+!s268.sampleID := 'Sample0268'
+!new Sample('s269')
+!s269.sampleID := 'Sample0269'
+!new Sample('s270')
+!s270.sampleID := 'Sample0270'
+!new Sample('s271')
+!s271.sampleID := 'Sample0271'
+!new Sample('s272')
+!s272.sampleID := 'Sample0272'
+!new Sample('s273')
+!s273.sampleID := 'Sample0273'
+!new Sample('s274')
+!s274.sampleID := 'Sample0274'
+!new Sample('s275')
+!s275.sampleID := 'Sample0275'
+!new Sample('s276')
+!s276.sampleID := 'Sample0276'
+!new Sample('s277')
+!s277.sampleID := 'Sample0277'
+!new Sample('s278')
+!s278.sampleID := 'Sample0278'
+!new Sample('s279')
+!s279.sampleID := 'Sample0279'
+!new Sample('s280')
+!s280.sampleID := 'Sample0280'
+!new Sample('s281')
+!s281.sampleID := 'Sample0281'
+!new Sample('s282')
+!s282.sampleID := 'Sample0282'
+!new Sample('s283')
+!s283.sampleID := 'Sample0283'
+!new Sample('s284')
+!s284.sampleID := 'Sample0284'
+!new Sample('s285')
+!s285.sampleID := 'Sample0285'
+!new Sample('s286')
+!s286.sampleID := 'Sample0286'
+!new Sample('s287')
+!s287.sampleID := 'Sample0287'
+!new Sample('s288')
+!s288.sampleID := 'Sample0288'
+!new Sample('s289')
+!s289.sampleID := 'Sample0289'
+!new Sample('s290')
+!s290.sampleID := 'Sample0290'
+!new Sample('s291')
+!s291.sampleID := 'Sample0291'
+!new Sample('s292')
+!s292.sampleID := 'Sample0292'
+!new Sample('s293')
+!s293.sampleID := 'Sample0293'
+!new Sample('s294')
+!s294.sampleID := 'Sample0294'
+!new Sample('s295')
+!s295.sampleID := 'Sample0295'
+!new Sample('s296')
+!s296.sampleID := 'Sample0296'
+!new Sample('s297')
+!s297.sampleID := 'Sample0297'
+!new Sample('s298')
+!s298.sampleID := 'Sample0298'
+!new Sample('s299')
+!s299.sampleID := 'Sample0299'
+!new Sample('s300')
+!s300.sampleID := 'Sample0300'
+!new Sample('s301')
+!s301.sampleID := 'Sample0301'
+!new Sample('s302')
+!s302.sampleID := 'Sample0302'
+!new Sample('s303')
+!s303.sampleID := 'Sample0303'
+!new Sample('s304')
+!s304.sampleID := 'Sample0304'
+!new Sample('s305')
+!s305.sampleID := 'Sample0305'
+!new Sample('s306')
+!s306.sampleID := 'Sample0306'
+!new Sample('s307')
+!s307.sampleID := 'Sample0307'
+!new Sample('s308')
+!s308.sampleID := 'Sample0308'
+!new Sample('s309')
+!s309.sampleID := 'Sample0309'
+!new Sample('s310')
+!s310.sampleID := 'Sample0310'
+!new Sample('s311')
+!s311.sampleID := 'Sample0311'
+!new Sample('s312')
+!s312.sampleID := 'Sample0312'
+!new Sample('s313')
+!s313.sampleID := 'Sample0313'
+!new Sample('s314')
+!s314.sampleID := 'Sample0314'
+!new Sample('s315')
+!s315.sampleID := 'Sample0315'
+!new Sample('s316')
+!s316.sampleID := 'Sample0316'
+!new Sample('s317')
+!s317.sampleID := 'Sample0317'
+!new Sample('s318')
+!s318.sampleID := 'Sample0318'
+!new Sample('s319')
+!s319.sampleID := 'Sample0319'
+!new Sample('s320')
+!s320.sampleID := 'Sample0320'
+!new Sample('s321')
+!s321.sampleID := 'Sample0321'
+!new Sample('s322')
+!s322.sampleID := 'Sample0322'
+!new Sample('s323')
+!s323.sampleID := 'Sample0323'
+!new Sample('s324')
+!s324.sampleID := 'Sample0324'
+!new Sample('s325')
+!s325.sampleID := 'Sample0325'
+!new Sample('s326')
+!s326.sampleID := 'Sample0326'
+!new Sample('s327')
+!s327.sampleID := 'Sample0327'
+!new Sample('s328')
+!s328.sampleID := 'Sample0328'
+!new Sample('s329')
+!s329.sampleID := 'Sample0329'
+!new Sample('s330')
+!s330.sampleID := 'Sample0330'
+!new Sample('s331')
+!s331.sampleID := 'Sample0331'
+!new Sample('s332')
+!s332.sampleID := 'Sample0332'
+!new Sample('s333')
+!s333.sampleID := 'Sample0333'
+!new Sample('s334')
+!s334.sampleID := 'Sample0334'
+!new Sample('s335')
+!s335.sampleID := 'Sample0335'
+!new Sample('s336')
+!s336.sampleID := 'Sample0336'
+!new Sample('s337')
+!s337.sampleID := 'Sample0337'
+!new Sample('s338')
+!s338.sampleID := 'Sample0338'
+!new Sample('s339')
+!s339.sampleID := 'Sample0339'
+!new Sample('s340')
+!s340.sampleID := 'Sample0340'
+!new Sample('s341')
+!s341.sampleID := 'Sample0341'
+!new Sample('s342')
+!s342.sampleID := 'Sample0342'
+!new Sample('s343')
+!s343.sampleID := 'Sample0343'
+!new Sample('s344')
+!s344.sampleID := 'Sample0344'
+!new Sample('s345')
+!s345.sampleID := 'Sample0345'
+!new Sample('s346')
+!s346.sampleID := 'Sample0346'
+!new Sample('s347')
+!s347.sampleID := 'Sample0347'
+!new Sample('s348')
+!s348.sampleID := 'Sample0348'
+!new Sample('s349')
+!s349.sampleID := 'Sample0349'
+!new Sample('s350')
+!s350.sampleID := 'Sample0350'
+!new Sample('s351')
+!s351.sampleID := 'Sample0351'
+!new Sample('s352')
+!s352.sampleID := 'Sample0352'
+!new Sample('s353')
+!s353.sampleID := 'Sample0353'
+!new Sample('s354')
+!s354.sampleID := 'Sample0354'
+!new Sample('s355')
+!s355.sampleID := 'Sample0355'
+!new Sample('s356')
+!s356.sampleID := 'Sample0356'
+!new Sample('s357')
+!s357.sampleID := 'Sample0357'
+!new Sample('s358')
+!s358.sampleID := 'Sample0358'
+!new Sample('s359')
+!s359.sampleID := 'Sample0359'
+!new Sample('s360')
+!s360.sampleID := 'Sample0360'
+!new Sample('s361')
+!s361.sampleID := 'Sample0361'
+!new Sample('s362')
+!s362.sampleID := 'Sample0362'
+!new Sample('s363')
+!s363.sampleID := 'Sample0363'
+!new Sample('s364')
+!s364.sampleID := 'Sample0364'
+!new Sample('s365')
+!s365.sampleID := 'Sample0365'
+!new Sample('s366')
+!s366.sampleID := 'Sample0366'
+!new Sample('s367')
+!s367.sampleID := 'Sample0367'
+!new Sample('s368')
+!s368.sampleID := 'Sample0368'
+!new Sample('s369')
+!s369.sampleID := 'Sample0369'
+!new Sample('s370')
+!s370.sampleID := 'Sample0370'
+!new Sample('s371')
+!s371.sampleID := 'Sample0371'
+!new Sample('s372')
+!s372.sampleID := 'Sample0372'
+!new Sample('s373')
+!s373.sampleID := 'Sample0373'
+!new Sample('s374')
+!s374.sampleID := 'Sample0374'
+!new Sample('s375')
+!s375.sampleID := 'Sample0375'
+!new Sample('s376')
+!s376.sampleID := 'Sample0376'
+!new Sample('s377')
+!s377.sampleID := 'Sample0377'
+!new Sample('s378')
+!s378.sampleID := 'Sample0378'
+!new Sample('s379')
+!s379.sampleID := 'Sample0379'
+!new Sample('s380')
+!s380.sampleID := 'Sample0380'
+!new Sample('s381')
+!s381.sampleID := 'Sample0381'
+!new Sample('s382')
+!s382.sampleID := 'Sample0382'
+!new Sample('s383')
+!s383.sampleID := 'Sample0383'
+!new Sample('s384')
+!s384.sampleID := 'Sample0384'
+!new Sample('s385')
+!s385.sampleID := 'Sample0385'
+!new Sample('s386')
+!s386.sampleID := 'Sample0386'
+!new Sample('s387')
+!s387.sampleID := 'Sample0387'
+!new Sample('s388')
+!s388.sampleID := 'Sample0388'
+!new Sample('s389')
+!s389.sampleID := 'Sample0389'
+!new Sample('s390')
+!s390.sampleID := 'Sample0390'
+!new Sample('s391')
+!s391.sampleID := 'Sample0391'
+!new Sample('s392')
+!s392.sampleID := 'Sample0392'
+!new Sample('s393')
+!s393.sampleID := 'Sample0393'
+!new Sample('s394')
+!s394.sampleID := 'Sample0394'
+!new Sample('s395')
+!s395.sampleID := 'Sample0395'
+!new Sample('s396')
+!s396.sampleID := 'Sample0396'
+!new Sample('s397')
+!s397.sampleID := 'Sample0397'
+!new Sample('s398')
+!s398.sampleID := 'Sample0398'
+!new Sample('s399')
+!s399.sampleID := 'Sample0399'
+!new Sample('s400')
+!s400.sampleID := 'Sample0400'
+!new Sample('s401')
+!s401.sampleID := 'Sample0401'
+!new Sample('s402')
+!s402.sampleID := 'Sample0402'
+!new Sample('s403')
+!s403.sampleID := 'Sample0403'
+!new Sample('s404')
+!s404.sampleID := 'Sample0404'
+!new Sample('s405')
+!s405.sampleID := 'Sample0405'
+!new Sample('s406')
+!s406.sampleID := 'Sample0406'
+!new Sample('s407')
+!s407.sampleID := 'Sample0407'
+!new Sample('s408')
+!s408.sampleID := 'Sample0408'
+!new Sample('s409')
+!s409.sampleID := 'Sample0409'
+!new Sample('s410')
+!s410.sampleID := 'Sample0410'
+!new Sample('s411')
+!s411.sampleID := 'Sample0411'
+!new Sample('s412')
+!s412.sampleID := 'Sample0412'
+!new Sample('s413')
+!s413.sampleID := 'Sample0413'
+!new Sample('s414')
+!s414.sampleID := 'Sample0414'
+!new Sample('s415')
+!s415.sampleID := 'Sample0415'
+!new Sample('s416')
+!s416.sampleID := 'Sample0416'
+!new Sample('s417')
+!s417.sampleID := 'Sample0417'
+!new Sample('s418')
+!s418.sampleID := 'Sample0418'
+!new Sample('s419')
+!s419.sampleID := 'Sample0419'
+!new Sample('s420')
+!s420.sampleID := 'Sample0420'
+!new Sample('s421')
+!s421.sampleID := 'Sample0421'
+!new Sample('s422')
+!s422.sampleID := 'Sample0422'
+!new Sample('s423')
+!s423.sampleID := 'Sample0423'
+!new Sample('s424')
+!s424.sampleID := 'Sample0424'
+!new Sample('s425')
+!s425.sampleID := 'Sample0425'
+!new Sample('s426')
+!s426.sampleID := 'Sample0426'
+!new Sample('s427')
+!s427.sampleID := 'Sample0427'
+!new Sample('s428')
+!s428.sampleID := 'Sample0428'
+!new Sample('s429')
+!s429.sampleID := 'Sample0429'
+!new Sample('s430')
+!s430.sampleID := 'Sample0430'
+!new Sample('s431')
+!s431.sampleID := 'Sample0431'
+!new Sample('s432')
+!s432.sampleID := 'Sample0432'
+!new Sample('s433')
+!s433.sampleID := 'Sample0433'
+!new Sample('s434')
+!s434.sampleID := 'Sample0434'
+!new Sample('s435')
+!s435.sampleID := 'Sample0435'
+!new Sample('s436')
+!s436.sampleID := 'Sample0436'
+!new Sample('s437')
+!s437.sampleID := 'Sample0437'
+!new Sample('s438')
+!s438.sampleID := 'Sample0438'
+!new Sample('s439')
+!s439.sampleID := 'Sample0439'
+!new Sample('s440')
+!s440.sampleID := 'Sample0440'
+!new Sample('s441')
+!s441.sampleID := 'Sample0441'
+!new Sample('s442')
+!s442.sampleID := 'Sample0442'
+!new Sample('s443')
+!s443.sampleID := 'Sample0443'
+!new Sample('s444')
+!s444.sampleID := 'Sample0444'
+!new Sample('s445')
+!s445.sampleID := 'Sample0445'
+!new Sample('s446')
+!s446.sampleID := 'Sample0446'
+!new Sample('s447')
+!s447.sampleID := 'Sample0447'
+!new Sample('s448')
+!s448.sampleID := 'Sample0448'
+!new Sample('s449')
+!s449.sampleID := 'Sample0449'
+!new Sample('s450')
+!s450.sampleID := 'Sample0450'
+!new Sample('s451')
+!s451.sampleID := 'Sample0451'
+!new Sample('s452')
+!s452.sampleID := 'Sample0452'
+!new Sample('s453')
+!s453.sampleID := 'Sample0453'
+!new Sample('s454')
+!s454.sampleID := 'Sample0454'
+!new Sample('s455')
+!s455.sampleID := 'Sample0455'
+!new Sample('s456')
+!s456.sampleID := 'Sample0456'
+!new Sample('s457')
+!s457.sampleID := 'Sample0457'
+!new Sample('s458')
+!s458.sampleID := 'Sample0458'
+!new Sample('s459')
+!s459.sampleID := 'Sample0459'
+!new Sample('s460')
+!s460.sampleID := 'Sample0460'
+!new Sample('s461')
+!s461.sampleID := 'Sample0461'
+!new Sample('s462')
+!s462.sampleID := 'Sample0462'
+!new Sample('s463')
+!s463.sampleID := 'Sample0463'
+!new Sample('s464')
+!s464.sampleID := 'Sample0464'
+!new Sample('s465')
+!s465.sampleID := 'Sample0465'
+!new Sample('s466')
+!s466.sampleID := 'Sample0466'
+!new Sample('s467')
+!s467.sampleID := 'Sample0467'
+!new Sample('s468')
+!s468.sampleID := 'Sample0468'
+!new Sample('s469')
+!s469.sampleID := 'Sample0469'
+!new Sample('s470')
+!s470.sampleID := 'Sample0470'
+!new Sample('s471')
+!s471.sampleID := 'Sample0471'
+!new Sample('s472')
+!s472.sampleID := 'Sample0472'
+!new Sample('s473')
+!s473.sampleID := 'Sample0473'
+!new Sample('s474')
+!s474.sampleID := 'Sample0474'
+!new Sample('s475')
+!s475.sampleID := 'Sample0475'
+!new Sample('s476')
+!s476.sampleID := 'Sample0476'
+!new Sample('s477')
+!s477.sampleID := 'Sample0477'
+!new Sample('s478')
+!s478.sampleID := 'Sample0478'
+!new Sample('s479')
+!s479.sampleID := 'Sample0479'
+!new Sample('s480')
+!s480.sampleID := 'Sample0480'
+!new Sample('s481')
+!s481.sampleID := 'Sample0481'
+!new Sample('s482')
+!s482.sampleID := 'Sample0482'
+!new Sample('s483')
+!s483.sampleID := 'Sample0483'
+!new Sample('s484')
+!s484.sampleID := 'Sample0484'
+!new Sample('s485')
+!s485.sampleID := 'Sample0485'
+!new Sample('s486')
+!s486.sampleID := 'Sample0486'
+!new Sample('s487')
+!s487.sampleID := 'Sample0487'
+!new Sample('s488')
+!s488.sampleID := 'Sample0488'
+!new Sample('s489')
+!s489.sampleID := 'Sample0489'
+!new Sample('s490')
+!s490.sampleID := 'Sample0490'
+!new Sample('s491')
+!s491.sampleID := 'Sample0491'
+!new Sample('s492')
+!s492.sampleID := 'Sample0492'
+!new Sample('s493')
+!s493.sampleID := 'Sample0493'
+!new Sample('s494')
+!s494.sampleID := 'Sample0494'
+!new Sample('s495')
+!s495.sampleID := 'Sample0495'
+!new Sample('s496')
+!s496.sampleID := 'Sample0496'
+!new Sample('s497')
+!s497.sampleID := 'Sample0497'
+!new Sample('s498')
+!s498.sampleID := 'Sample0498'
+!new Sample('s499')
+!s499.sampleID := 'Sample0499'
+!new Sample('s500')
+!s500.sampleID := 'Sample0500'
+!new Sample('s501')
+!s501.sampleID := 'Sample0501'
+!new Sample('s502')
+!s502.sampleID := 'Sample0502'
+!new Sample('s503')
+!s503.sampleID := 'Sample0503'
+!new Sample('s504')
+!s504.sampleID := 'Sample0504'
+!new Sample('s505')
+!s505.sampleID := 'Sample0505'
+!new Sample('s506')
+!s506.sampleID := 'Sample0506'
+!new Sample('s507')
+!s507.sampleID := 'Sample0507'
+!new Sample('s508')
+!s508.sampleID := 'Sample0508'
+!new Sample('s509')
+!s509.sampleID := 'Sample0509'
+!new Sample('s510')
+!s510.sampleID := 'Sample0510'
+!new Sample('s511')
+!s511.sampleID := 'Sample0511'
+!new Sample('s512')
+!s512.sampleID := 'Sample0512'
+!insert (jr, s1) into SampleRegistration
+!insert (jr, s2) into SampleRegistration
+!insert (jr, s3) into SampleRegistration
+!insert (jr, s4) into SampleRegistration
+!insert (jr, s5) into SampleRegistration
+!insert (jr, s6) into SampleRegistration
+!insert (jr, s7) into SampleRegistration
+!insert (jr, s8) into SampleRegistration
+!insert (jr, s9) into SampleRegistration
+!insert (jr, s10) into SampleRegistration
+!insert (jr, s11) into SampleRegistration
+!insert (jr, s12) into SampleRegistration
+!insert (jr, s13) into SampleRegistration
+!insert (jr, s14) into SampleRegistration
+!insert (jr, s15) into SampleRegistration
+!insert (jr, s16) into SampleRegistration
+!insert (jr, s17) into SampleRegistration
+!insert (jr, s18) into SampleRegistration
+!insert (jr, s19) into SampleRegistration
+!insert (jr, s20) into SampleRegistration
+!insert (jr, s21) into SampleRegistration
+!insert (jr, s22) into SampleRegistration
+!insert (jr, s23) into SampleRegistration
+!insert (jr, s24) into SampleRegistration
+!insert (jr, s25) into SampleRegistration
+!insert (jr, s26) into SampleRegistration
+!insert (jr, s27) into SampleRegistration
+!insert (jr, s28) into SampleRegistration
+!insert (jr, s29) into SampleRegistration
+!insert (jr, s30) into SampleRegistration
+!insert (jr, s31) into SampleRegistration
+!insert (jr, s32) into SampleRegistration
+!insert (jr, s33) into SampleRegistration
+!insert (jr, s34) into SampleRegistration
+!insert (jr, s35) into SampleRegistration
+!insert (jr, s36) into SampleRegistration
+!insert (jr, s37) into SampleRegistration
+!insert (jr, s38) into SampleRegistration
+!insert (jr, s39) into SampleRegistration
+!insert (jr, s40) into SampleRegistration
+!insert (jr, s41) into SampleRegistration
+!insert (jr, s42) into SampleRegistration
+!insert (jr, s43) into SampleRegistration
+!insert (jr, s44) into SampleRegistration
+!insert (jr, s45) into SampleRegistration
+!insert (jr, s46) into SampleRegistration
+!insert (jr, s47) into SampleRegistration
+!insert (jr, s48) into SampleRegistration
+!insert (jr, s49) into SampleRegistration
+!insert (jr, s50) into SampleRegistration
+!insert (jr, s51) into SampleRegistration
+!insert (jr, s52) into SampleRegistration
+!insert (jr, s53) into SampleRegistration
+!insert (jr, s54) into SampleRegistration
+!insert (jr, s55) into SampleRegistration
+!insert (jr, s56) into SampleRegistration
+!insert (jr, s57) into SampleRegistration
+!insert (jr, s58) into SampleRegistration
+!insert (jr, s59) into SampleRegistration
+!insert (jr, s60) into SampleRegistration
+!insert (jr, s61) into SampleRegistration
+!insert (jr, s62) into SampleRegistration
+!insert (jr, s63) into SampleRegistration
+!insert (jr, s64) into SampleRegistration
+!insert (jr, s65) into SampleRegistration
+!insert (jr, s66) into SampleRegistration
+!insert (jr, s67) into SampleRegistration
+!insert (jr, s68) into SampleRegistration
+!insert (jr, s69) into SampleRegistration
+!insert (jr, s70) into SampleRegistration
+!insert (jr, s71) into SampleRegistration
+!insert (jr, s72) into SampleRegistration
+!insert (jr, s73) into SampleRegistration
+!insert (jr, s74) into SampleRegistration
+!insert (jr, s75) into SampleRegistration
+!insert (jr, s76) into SampleRegistration
+!insert (jr, s77) into SampleRegistration
+!insert (jr, s78) into SampleRegistration
+!insert (jr, s79) into SampleRegistration
+!insert (jr, s80) into SampleRegistration
+!insert (jr, s81) into SampleRegistration
+!insert (jr, s82) into SampleRegistration
+!insert (jr, s83) into SampleRegistration
+!insert (jr, s84) into SampleRegistration
+!insert (jr, s85) into SampleRegistration
+!insert (jr, s86) into SampleRegistration
+!insert (jr, s87) into SampleRegistration
+!insert (jr, s88) into SampleRegistration
+!insert (jr, s89) into SampleRegistration
+!insert (jr, s90) into SampleRegistration
+!insert (jr, s91) into SampleRegistration
+!insert (jr, s92) into SampleRegistration
+!insert (jr, s93) into SampleRegistration
+!insert (jr, s94) into SampleRegistration
+!insert (jr, s95) into SampleRegistration
+!insert (jr, s96) into SampleRegistration
+!insert (jr, s97) into SampleRegistration
+!insert (jr, s98) into SampleRegistration
+!insert (jr, s99) into SampleRegistration
+!insert (jr, s100) into SampleRegistration
+!insert (jr, s101) into SampleRegistration
+!insert (jr, s102) into SampleRegistration
+!insert (jr, s103) into SampleRegistration
+!insert (jr, s104) into SampleRegistration
+!insert (jr, s105) into SampleRegistration
+!insert (jr, s106) into SampleRegistration
+!insert (jr, s107) into SampleRegistration
+!insert (jr, s108) into SampleRegistration
+!insert (jr, s109) into SampleRegistration
+!insert (jr, s110) into SampleRegistration
+!insert (jr, s111) into SampleRegistration
+!insert (jr, s112) into SampleRegistration
+!insert (jr, s113) into SampleRegistration
+!insert (jr, s114) into SampleRegistration
+!insert (jr, s115) into SampleRegistration
+!insert (jr, s116) into SampleRegistration
+!insert (jr, s117) into SampleRegistration
+!insert (jr, s118) into SampleRegistration
+!insert (jr, s119) into SampleRegistration
+!insert (jr, s120) into SampleRegistration
+!insert (jr, s121) into SampleRegistration
+!insert (jr, s122) into SampleRegistration
+!insert (jr, s123) into SampleRegistration
+!insert (jr, s124) into SampleRegistration
+!insert (jr, s125) into SampleRegistration
+!insert (jr, s126) into SampleRegistration
+!insert (jr, s127) into SampleRegistration
+!insert (jr, s128) into SampleRegistration
+!insert (jr, s129) into SampleRegistration
+!insert (jr, s130) into SampleRegistration
+!insert (jr, s131) into SampleRegistration
+!insert (jr, s132) into SampleRegistration
+!insert (jr, s133) into SampleRegistration
+!insert (jr, s134) into SampleRegistration
+!insert (jr, s135) into SampleRegistration
+!insert (jr, s136) into SampleRegistration
+!insert (jr, s137) into SampleRegistration
+!insert (jr, s138) into SampleRegistration
+!insert (jr, s139) into SampleRegistration
+!insert (jr, s140) into SampleRegistration
+!insert (jr, s141) into SampleRegistration
+!insert (jr, s142) into SampleRegistration
+!insert (jr, s143) into SampleRegistration
+!insert (jr, s144) into SampleRegistration
+!insert (jr, s145) into SampleRegistration
+!insert (jr, s146) into SampleRegistration
+!insert (jr, s147) into SampleRegistration
+!insert (jr, s148) into SampleRegistration
+!insert (jr, s149) into SampleRegistration
+!insert (jr, s150) into SampleRegistration
+!insert (jr, s151) into SampleRegistration
+!insert (jr, s152) into SampleRegistration
+!insert (jr, s153) into SampleRegistration
+!insert (jr, s154) into SampleRegistration
+!insert (jr, s155) into SampleRegistration
+!insert (jr, s156) into SampleRegistration
+!insert (jr, s157) into SampleRegistration
+!insert (jr, s158) into SampleRegistration
+!insert (jr, s159) into SampleRegistration
+!insert (jr, s160) into SampleRegistration
+!insert (jr, s161) into SampleRegistration
+!insert (jr, s162) into SampleRegistration
+!insert (jr, s163) into SampleRegistration
+!insert (jr, s164) into SampleRegistration
+!insert (jr, s165) into SampleRegistration
+!insert (jr, s166) into SampleRegistration
+!insert (jr, s167) into SampleRegistration
+!insert (jr, s168) into SampleRegistration
+!insert (jr, s169) into SampleRegistration
+!insert (jr, s170) into SampleRegistration
+!insert (jr, s171) into SampleRegistration
+!insert (jr, s172) into SampleRegistration
+!insert (jr, s173) into SampleRegistration
+!insert (jr, s174) into SampleRegistration
+!insert (jr, s175) into SampleRegistration
+!insert (jr, s176) into SampleRegistration
+!insert (jr, s177) into SampleRegistration
+!insert (jr, s178) into SampleRegistration
+!insert (jr, s179) into SampleRegistration
+!insert (jr, s180) into SampleRegistration
+!insert (jr, s181) into SampleRegistration
+!insert (jr, s182) into SampleRegistration
+!insert (jr, s183) into SampleRegistration
+!insert (jr, s184) into SampleRegistration
+!insert (jr, s185) into SampleRegistration
+!insert (jr, s186) into SampleRegistration
+!insert (jr, s187) into SampleRegistration
+!insert (jr, s188) into SampleRegistration
+!insert (jr, s189) into SampleRegistration
+!insert (jr, s190) into SampleRegistration
+!insert (jr, s191) into SampleRegistration
+!insert (jr, s192) into SampleRegistration
+!insert (jr, s193) into SampleRegistration
+!insert (jr, s194) into SampleRegistration
+!insert (jr, s195) into SampleRegistration
+!insert (jr, s196) into SampleRegistration
+!insert (jr, s197) into SampleRegistration
+!insert (jr, s198) into SampleRegistration
+!insert (jr, s199) into SampleRegistration
+!insert (jr, s200) into SampleRegistration
+!insert (jr, s201) into SampleRegistration
+!insert (jr, s202) into SampleRegistration
+!insert (jr, s203) into SampleRegistration
+!insert (jr, s204) into SampleRegistration
+!insert (jr, s205) into SampleRegistration
+!insert (jr, s206) into SampleRegistration
+!insert (jr, s207) into SampleRegistration
+!insert (jr, s208) into SampleRegistration
+!insert (jr, s209) into SampleRegistration
+!insert (jr, s210) into SampleRegistration
+!insert (jr, s211) into SampleRegistration
+!insert (jr, s212) into SampleRegistration
+!insert (jr, s213) into SampleRegistration
+!insert (jr, s214) into SampleRegistration
+!insert (jr, s215) into SampleRegistration
+!insert (jr, s216) into SampleRegistration
+!insert (jr, s217) into SampleRegistration
+!insert (jr, s218) into SampleRegistration
+!insert (jr, s219) into SampleRegistration
+!insert (jr, s220) into SampleRegistration
+!insert (jr, s221) into SampleRegistration
+!insert (jr, s222) into SampleRegistration
+!insert (jr, s223) into SampleRegistration
+!insert (jr, s224) into SampleRegistration
+!insert (jr, s225) into SampleRegistration
+!insert (jr, s226) into SampleRegistration
+!insert (jr, s227) into SampleRegistration
+!insert (jr, s228) into SampleRegistration
+!insert (jr, s229) into SampleRegistration
+!insert (jr, s230) into SampleRegistration
+!insert (jr, s231) into SampleRegistration
+!insert (jr, s232) into SampleRegistration
+!insert (jr, s233) into SampleRegistration
+!insert (jr, s234) into SampleRegistration
+!insert (jr, s235) into SampleRegistration
+!insert (jr, s236) into SampleRegistration
+!insert (jr, s237) into SampleRegistration
+!insert (jr, s238) into SampleRegistration
+!insert (jr, s239) into SampleRegistration
+!insert (jr, s240) into SampleRegistration
+!insert (jr, s241) into SampleRegistration
+!insert (jr, s242) into SampleRegistration
+!insert (jr, s243) into SampleRegistration
+!insert (jr, s244) into SampleRegistration
+!insert (jr, s245) into SampleRegistration
+!insert (jr, s246) into SampleRegistration
+!insert (jr, s247) into SampleRegistration
+!insert (jr, s248) into SampleRegistration
+!insert (jr, s249) into SampleRegistration
+!insert (jr, s250) into SampleRegistration
+!insert (jr, s251) into SampleRegistration
+!insert (jr, s252) into SampleRegistration
+!insert (jr, s253) into SampleRegistration
+!insert (jr, s254) into SampleRegistration
+!insert (jr, s255) into SampleRegistration
+!insert (jr, s256) into SampleRegistration
+!insert (jr, s257) into SampleRegistration
+!insert (jr, s258) into SampleRegistration
+!insert (jr, s259) into SampleRegistration
+!insert (jr, s260) into SampleRegistration
+!insert (jr, s261) into SampleRegistration
+!insert (jr, s262) into SampleRegistration
+!insert (jr, s263) into SampleRegistration
+!insert (jr, s264) into SampleRegistration
+!insert (jr, s265) into SampleRegistration
+!insert (jr, s266) into SampleRegistration
+!insert (jr, s267) into SampleRegistration
+!insert (jr, s268) into SampleRegistration
+!insert (jr, s269) into SampleRegistration
+!insert (jr, s270) into SampleRegistration
+!insert (jr, s271) into SampleRegistration
+!insert (jr, s272) into SampleRegistration
+!insert (jr, s273) into SampleRegistration
+!insert (jr, s274) into SampleRegistration
+!insert (jr, s275) into SampleRegistration
+!insert (jr, s276) into SampleRegistration
+!insert (jr, s277) into SampleRegistration
+!insert (jr, s278) into SampleRegistration
+!insert (jr, s279) into SampleRegistration
+!insert (jr, s280) into SampleRegistration
+!insert (jr, s281) into SampleRegistration
+!insert (jr, s282) into SampleRegistration
+!insert (jr, s283) into SampleRegistration
+!insert (jr, s284) into SampleRegistration
+!insert (jr, s285) into SampleRegistration
+!insert (jr, s286) into SampleRegistration
+!insert (jr, s287) into SampleRegistration
+!insert (jr, s288) into SampleRegistration
+!insert (jr, s289) into SampleRegistration
+!insert (jr, s290) into SampleRegistration
+!insert (jr, s291) into SampleRegistration
+!insert (jr, s292) into SampleRegistration
+!insert (jr, s293) into SampleRegistration
+!insert (jr, s294) into SampleRegistration
+!insert (jr, s295) into SampleRegistration
+!insert (jr, s296) into SampleRegistration
+!insert (jr, s297) into SampleRegistration
+!insert (jr, s298) into SampleRegistration
+!insert (jr, s299) into SampleRegistration
+!insert (jr, s300) into SampleRegistration
+!insert (jr, s301) into SampleRegistration
+!insert (jr, s302) into SampleRegistration
+!insert (jr, s303) into SampleRegistration
+!insert (jr, s304) into SampleRegistration
+!insert (jr, s305) into SampleRegistration
+!insert (jr, s306) into SampleRegistration
+!insert (jr, s307) into SampleRegistration
+!insert (jr, s308) into SampleRegistration
+!insert (jr, s309) into SampleRegistration
+!insert (jr, s310) into SampleRegistration
+!insert (jr, s311) into SampleRegistration
+!insert (jr, s312) into SampleRegistration
+!insert (jr, s313) into SampleRegistration
+!insert (jr, s314) into SampleRegistration
+!insert (jr, s315) into SampleRegistration
+!insert (jr, s316) into SampleRegistration
+!insert (jr, s317) into SampleRegistration
+!insert (jr, s318) into SampleRegistration
+!insert (jr, s319) into SampleRegistration
+!insert (jr, s320) into SampleRegistration
+!insert (jr, s321) into SampleRegistration
+!insert (jr, s322) into SampleRegistration
+!insert (jr, s323) into SampleRegistration
+!insert (jr, s324) into SampleRegistration
+!insert (jr, s325) into SampleRegistration
+!insert (jr, s326) into SampleRegistration
+!insert (jr, s327) into SampleRegistration
+!insert (jr, s328) into SampleRegistration
+!insert (jr, s329) into SampleRegistration
+!insert (jr, s330) into SampleRegistration
+!insert (jr, s331) into SampleRegistration
+!insert (jr, s332) into SampleRegistration
+!insert (jr, s333) into SampleRegistration
+!insert (jr, s334) into SampleRegistration
+!insert (jr, s335) into SampleRegistration
+!insert (jr, s336) into SampleRegistration
+!insert (jr, s337) into SampleRegistration
+!insert (jr, s338) into SampleRegistration
+!insert (jr, s339) into SampleRegistration
+!insert (jr, s340) into SampleRegistration
+!insert (jr, s341) into SampleRegistration
+!insert (jr, s342) into SampleRegistration
+!insert (jr, s343) into SampleRegistration
+!insert (jr, s344) into SampleRegistration
+!insert (jr, s345) into SampleRegistration
+!insert (jr, s346) into SampleRegistration
+!insert (jr, s347) into SampleRegistration
+!insert (jr, s348) into SampleRegistration
+!insert (jr, s349) into SampleRegistration
+!insert (jr, s350) into SampleRegistration
+!insert (jr, s351) into SampleRegistration
+!insert (jr, s352) into SampleRegistration
+!insert (jr, s353) into SampleRegistration
+!insert (jr, s354) into SampleRegistration
+!insert (jr, s355) into SampleRegistration
+!insert (jr, s356) into SampleRegistration
+!insert (jr, s357) into SampleRegistration
+!insert (jr, s358) into SampleRegistration
+!insert (jr, s359) into SampleRegistration
+!insert (jr, s360) into SampleRegistration
+!insert (jr, s361) into SampleRegistration
+!insert (jr, s362) into SampleRegistration
+!insert (jr, s363) into SampleRegistration
+!insert (jr, s364) into SampleRegistration
+!insert (jr, s365) into SampleRegistration
+!insert (jr, s366) into SampleRegistration
+!insert (jr, s367) into SampleRegistration
+!insert (jr, s368) into SampleRegistration
+!insert (jr, s369) into SampleRegistration
+!insert (jr, s370) into SampleRegistration
+!insert (jr, s371) into SampleRegistration
+!insert (jr, s372) into SampleRegistration
+!insert (jr, s373) into SampleRegistration
+!insert (jr, s374) into SampleRegistration
+!insert (jr, s375) into SampleRegistration
+!insert (jr, s376) into SampleRegistration
+!insert (jr, s377) into SampleRegistration
+!insert (jr, s378) into SampleRegistration
+!insert (jr, s379) into SampleRegistration
+!insert (jr, s380) into SampleRegistration
+!insert (jr, s381) into SampleRegistration
+!insert (jr, s382) into SampleRegistration
+!insert (jr, s383) into SampleRegistration
+!insert (jr, s384) into SampleRegistration
+!insert (jr, s385) into SampleRegistration
+!insert (jr, s386) into SampleRegistration
+!insert (jr, s387) into SampleRegistration
+!insert (jr, s388) into SampleRegistration
+!insert (jr, s389) into SampleRegistration
+!insert (jr, s390) into SampleRegistration
+!insert (jr, s391) into SampleRegistration
+!insert (jr, s392) into SampleRegistration
+!insert (jr, s393) into SampleRegistration
+!insert (jr, s394) into SampleRegistration
+!insert (jr, s395) into SampleRegistration
+!insert (jr, s396) into SampleRegistration
+!insert (jr, s397) into SampleRegistration
+!insert (jr, s398) into SampleRegistration
+!insert (jr, s399) into SampleRegistration
+!insert (jr, s400) into SampleRegistration
+!insert (jr, s401) into SampleRegistration
+!insert (jr, s402) into SampleRegistration
+!insert (jr, s403) into SampleRegistration
+!insert (jr, s404) into SampleRegistration
+!insert (jr, s405) into SampleRegistration
+!insert (jr, s406) into SampleRegistration
+!insert (jr, s407) into SampleRegistration
+!insert (jr, s408) into SampleRegistration
+!insert (jr, s409) into SampleRegistration
+!insert (jr, s410) into SampleRegistration
+!insert (jr, s411) into SampleRegistration
+!insert (jr, s412) into SampleRegistration
+!insert (jr, s413) into SampleRegistration
+!insert (jr, s414) into SampleRegistration
+!insert (jr, s415) into SampleRegistration
+!insert (jr, s416) into SampleRegistration
+!insert (jr, s417) into SampleRegistration
+!insert (jr, s418) into SampleRegistration
+!insert (jr, s419) into SampleRegistration
+!insert (jr, s420) into SampleRegistration
+!insert (jr, s421) into SampleRegistration
+!insert (jr, s422) into SampleRegistration
+!insert (jr, s423) into SampleRegistration
+!insert (jr, s424) into SampleRegistration
+!insert (jr, s425) into SampleRegistration
+!insert (jr, s426) into SampleRegistration
+!insert (jr, s427) into SampleRegistration
+!insert (jr, s428) into SampleRegistration
+!insert (jr, s429) into SampleRegistration
+!insert (jr, s430) into SampleRegistration
+!insert (jr, s431) into SampleRegistration
+!insert (jr, s432) into SampleRegistration
+!insert (jr, s433) into SampleRegistration
+!insert (jr, s434) into SampleRegistration
+!insert (jr, s435) into SampleRegistration
+!insert (jr, s436) into SampleRegistration
+!insert (jr, s437) into SampleRegistration
+!insert (jr, s438) into SampleRegistration
+!insert (jr, s439) into SampleRegistration
+!insert (jr, s440) into SampleRegistration
+!insert (jr, s441) into SampleRegistration
+!insert (jr, s442) into SampleRegistration
+!insert (jr, s443) into SampleRegistration
+!insert (jr, s444) into SampleRegistration
+!insert (jr, s445) into SampleRegistration
+!insert (jr, s446) into SampleRegistration
+!insert (jr, s447) into SampleRegistration
+!insert (jr, s448) into SampleRegistration
+!insert (jr, s449) into SampleRegistration
+!insert (jr, s450) into SampleRegistration
+!insert (jr, s451) into SampleRegistration
+!insert (jr, s452) into SampleRegistration
+!insert (jr, s453) into SampleRegistration
+!insert (jr, s454) into SampleRegistration
+!insert (jr, s455) into SampleRegistration
+!insert (jr, s456) into SampleRegistration
+!insert (jr, s457) into SampleRegistration
+!insert (jr, s458) into SampleRegistration
+!insert (jr, s459) into SampleRegistration
+!insert (jr, s460) into SampleRegistration
+!insert (jr, s461) into SampleRegistration
+!insert (jr, s462) into SampleRegistration
+!insert (jr, s463) into SampleRegistration
+!insert (jr, s464) into SampleRegistration
+!insert (jr, s465) into SampleRegistration
+!insert (jr, s466) into SampleRegistration
+!insert (jr, s467) into SampleRegistration
+!insert (jr, s468) into SampleRegistration
+!insert (jr, s469) into SampleRegistration
+!insert (jr, s470) into SampleRegistration
+!insert (jr, s471) into SampleRegistration
+!insert (jr, s472) into SampleRegistration
+!insert (jr, s473) into SampleRegistration
+!insert (jr, s474) into SampleRegistration
+!insert (jr, s475) into SampleRegistration
+!insert (jr, s476) into SampleRegistration
+!insert (jr, s477) into SampleRegistration
+!insert (jr, s478) into SampleRegistration
+!insert (jr, s479) into SampleRegistration
+!insert (jr, s480) into SampleRegistration
+!insert (jr, s481) into SampleRegistration
+!insert (jr, s482) into SampleRegistration
+!insert (jr, s483) into SampleRegistration
+!insert (jr, s484) into SampleRegistration
+!insert (jr, s485) into SampleRegistration
+!insert (jr, s486) into SampleRegistration
+!insert (jr, s487) into SampleRegistration
+!insert (jr, s488) into SampleRegistration
+!insert (jr, s489) into SampleRegistration
+!insert (jr, s490) into SampleRegistration
+!insert (jr, s491) into SampleRegistration
+!insert (jr, s492) into SampleRegistration
+!insert (jr, s493) into SampleRegistration
+!insert (jr, s494) into SampleRegistration
+!insert (jr, s495) into SampleRegistration
+!insert (jr, s496) into SampleRegistration
+!insert (jr, s497) into SampleRegistration
+!insert (jr, s498) into SampleRegistration
+!insert (jr, s499) into SampleRegistration
+!insert (jr, s500) into SampleRegistration
+!insert (jr, s501) into SampleRegistration
+!insert (jr, s502) into SampleRegistration
+!insert (jr, s503) into SampleRegistration
+!insert (jr, s504) into SampleRegistration
+!insert (jr, s505) into SampleRegistration
+!insert (jr, s506) into SampleRegistration
+!insert (jr, s507) into SampleRegistration
+!insert (jr, s508) into SampleRegistration
+!insert (jr, s509) into SampleRegistration
+!insert (jr, s510) into SampleRegistration
+!insert (jr, s511) into SampleRegistration
+!insert (jr, s512) into SampleRegistration
+!new Assay('assay')
+!assay.name := 'AbstractElisa'
+!new DistributeSample('ds')
+!ds.id := 'AddSample'
+!ds.volume := 100
+!new Incubate('i1')
+!i1.id := 'BindAntibodies'
+!i1.temperature := 310.15
+!i1.duration := 40
+!new Wash('w1')
+!w1.id := 'WashAfterAntibodiesBound'
+!new AddReagent('ar1')
+!ar1.id := 'AddConjugate'
+!ar1.volume := 100
+!new Incubate('i2')
+!i2.id := 'BindConjugate'
+!i2.temperature := 310.15
+!i2.duration := 40
+!new Wash('w2')
+!w2.id := 'WashConjugate'
+!new AddReagent('ar2')
+!ar2.id := 'AddSubstrate'
+!ar2.volume := 100
+!new Incubate('i3')
+!i3.id := 'WaitForColorReaction'
+!i3.temperature := 293.15
+!i3.duration := 20
+!new Reagent('r1')
+!r1.name := 'Conjugate'
+!new Reagent('r2')
+!r2.name := 'Substrate'
+!insert (jr, assay) into AssayRegistration
+!insert (assay, ds) into Steps
+!insert (assay, i1) into Steps
+!insert (assay, i2) into Steps
+!insert (assay, i3) into Steps
+!insert (assay, w1) into Steps
+!insert (assay, w2) into Steps
+!insert (assay, ar1) into Steps
+!insert (assay, ar2) into Steps
+!insert (assay, r1) into Reagents
+!insert (assay, r2) into Reagents
+!insert (r1, ar1) into UsedReagentType
+!insert (r2, ar2) into UsedReagentType
+!insert (ds, i1) into TraceStep
+!insert (i1, w1) into TraceStep
+!insert (w1, ar1) into TraceStep
+!insert (ar1, i2) into TraceStep
+!insert (i2, w2) into TraceStep
+!insert (w2, ar2) into TraceStep
+!insert (ar2, i3) into TraceStep

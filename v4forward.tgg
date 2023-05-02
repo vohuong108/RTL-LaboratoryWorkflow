@@ -46,6 +46,8 @@ checkSource(
     jr: JobRequest
     s: Sample
     (jr, s): SampleRegistration
+
+    [S2TR.allInstances()->size() <> Sample.allInstances()->size()]
     [s.s2tr = Undefined]
     [s.sampleID <> Undefined]
     [s.state = SampleState::Waiting]
@@ -74,6 +76,8 @@ checkSource(
     jr: JobRequest
     s: Sample
     (jr, s): SampleRegistration
+
+    [S2TR.allInstances()->size() <> Sample.allInstances()->size()]
     [s.s2tr = Undefined]
     [s.sampleID <> Undefined]
     [s.state = SampleState::Waiting]
@@ -106,6 +110,7 @@ checkSource(
     (jr, assay): AssayRegistration
     (jr, s): SampleRegistration
 
+    [S2MP.allInstances()->size() <> Sample.allInstances()->size()]
     [assay.name <> Undefined]
     [s.sampleID <> Undefined]
     [s.s2mp = Undefined]
@@ -113,6 +118,7 @@ checkSource(
 
     // Tất cả các microplate đều đã map đủ 96 sample
     [S2MP.allInstances()->size().mod(96) = 0]
+    
 ){
 }checkTarget(
     jc: JobCollection
@@ -129,7 +135,6 @@ checkSource(
 }
 end
 
-
 rule SampleAssignExistMicroplate
 checkSource(
     jr: JobRequest
@@ -139,10 +144,12 @@ checkSource(
     (jr, assay): AssayRegistration
     (jr, s): SampleRegistration
 
+    [S2MP.allInstances()->size() <> Sample.allInstances()->size()]
     [S2MP.allInstances()->size() + 1 = s.getId()]
     [assay.name <> Undefined]
     [s.sampleID <> Undefined]
     [s.s2mp = Undefined]
+    
     
 ){
 }checkTarget(
@@ -150,8 +157,8 @@ checkSource(
     mp: Microplate
     (jc, mp): LabwareRegistration
 
-    [mp.name <> '']
     [mp.s2mp->size() < 96]
+    [mp.name <> '']
 ){
     
 }checkCorr(
@@ -173,13 +180,14 @@ checkSource(
     (assay, ds): Steps
     (jr, s): SampleRegistration
 
+    [ds.ds2ltj.ltj.tips->size() <> Sample.allInstances()->size()]
     [ds.ds2ltj.ltj.tips->size() + 1 = s.getId()]
     [ds.ds2ltj.ltj.tips->size().mod(8) = 0]
 
-    [assay.name <> Undefined]
-    [ds.id <> Undefined]
-    [s.sampleID <> Undefined]
-    [s.state = SampleState::Waiting]
+    --[assay.name <> Undefined]
+    --[ds.id <> Undefined]
+    --[s.sampleID <> Undefined]
+    --[s.state = SampleState::Waiting]
     
 ){
 
@@ -191,8 +199,8 @@ checkSource(
     (jc, tr): LabwareRegistration
     (jc, mp): LabwareRegistration
 
-    [tr.barcodes <> '']
-    [mp.name <> Undefined]
+    --[tr.barcodes <> '']
+    --[mp.name <> Undefined]
 ){
     ltj: LiquidTransferJob
     tlt: TipLiquidTransfer
@@ -240,13 +248,14 @@ checkSource(
     (assay, ds): Steps
     (jr, s): SampleRegistration
 
+    [ds.ds2ltj.ltj.tips->size() <> Sample.allInstances()->size()]
     [ds.ds2ltj.ltj.tips->size() + 1 = s.getId()]
     [ds.ds2ltj.ltj.tips->size().mod(8) <> 0]
 
-    [assay.name <> Undefined]
-    [ds.id <> Undefined]
-    [s.sampleID <> Undefined]
-    [s.state = SampleState::Waiting]
+    --[assay.name <> Undefined]
+    --[ds.id <> Undefined]
+    --[s.sampleID <> Undefined]
+    --[s.state = SampleState::Waiting]
     
 ){
 
@@ -263,8 +272,8 @@ checkSource(
     (mp, ltj): TrgTransfer
 
     [ltj.tips->size() < 8]
-    [tr.barcodes <> '']
-    [mp.name <> Undefined]
+    --[tr.barcodes <> '']
+    --[mp.name <> Undefined]
     
 ){
     
@@ -288,9 +297,9 @@ checkSource(
     [self.tlt.volume = self.tlt.pJob.ds2ltj.ds.volume]
     `self.tlt.volume := self.tlt.pJob.ds2ltj.ds.volume`
     ``
-    
 }
 end
+
 
 
 rule IncubateJob_New_1
@@ -445,14 +454,15 @@ checkSource(
     (assay, r): Reagents
     (r, ar): UsedReagentType
 
+    [ar.ar2ltj.ltj.tips->size() <> Sample.allInstances()->size()]
     [ar.ar2ltj.ltj.tips->size() + 1 = s.getId()]
     [ar.ar2ltj.ltj.tips->size().mod(8) = 0]
 
-    [assay.name <> Undefined]
-    [ar.id <> Undefined]
-    [s.sampleID <> Undefined]
-    [s.state = SampleState::Waiting]
-    [r.name <> Undefined]
+    --[assay.name <> Undefined]
+    --[ar.id <> Undefined]
+    --[s.sampleID <> Undefined]
+    --[s.state = SampleState::Waiting]
+    --[r.name <> Undefined]
 
 ){
 
@@ -464,8 +474,8 @@ checkSource(
     (jc, mp): LabwareRegistration
     (jc, t): LabwareRegistration
 
-    [mp.name <> Undefined]
-    [t.name <> Undefined]
+    --[mp.name <> Undefined]
+    --[t.name <> Undefined]
 ){
     ltj: LiquidTransferJob
     tlt: TipLiquidTransfer
@@ -510,14 +520,15 @@ checkSource(
     (r, ar): UsedReagentType
 
 
+    [ar.ar2ltj.ltj.tips->size() <> Sample.allInstances()->size()]
     [ar.ar2ltj.ltj.tips->size() + 1 = s.getId()]
     [ar.ar2ltj.ltj.tips->size().mod(8) <> 0]
 
-    [assay.name <> Undefined]
-    [ar.id <> Undefined]
-    [s.sampleID <> Undefined]
-    [s.state = SampleState::Waiting]
-    [r.name <> Undefined]
+    --[assay.name <> Undefined]
+    --[ar.id <> Undefined]
+    --[s.sampleID <> Undefined]
+    --[s.state = SampleState::Waiting]
+    --[r.name <> Undefined]
 ){
 
 }checkTarget(
@@ -535,8 +546,8 @@ checkSource(
 
     [ltj.tips->size() < 8]
 
-    [mp.name <> Undefined]
-    [t.name <> Undefined]
+    --[mp.name <> Undefined]
+    --[t.name <> Undefined]
 ){
     
     tlt: TipLiquidTransfer
@@ -560,8 +571,6 @@ checkSource(
 end
 
 
-
-
 rule Distribute_IncubateJob
 checkSource(
     jr: JobRequest
@@ -574,9 +583,10 @@ checkSource(
     (assay, i): Steps
     (ds, i): TraceStep
 
+    [ds.ds2ltj.ltj.next->size() <> ds.ds2ltj.ltj->size()]
     [assay.name <> Undefined]
     [ds.id <> Undefined]
-    [i.id <> Undefined]    
+    [i.id <> Undefined]
 ){
     
 }checkTarget(
@@ -605,7 +615,6 @@ checkSource(
 end
 
 
-
 rule AddReagent_IncubateJob
 checkSource(
     jr: JobRequest
@@ -618,6 +627,7 @@ checkSource(
     (assay, ar): Steps
     (ar, i): TraceStep
 
+    [ar.ar2ltj.ltj.next->size() <> ar.ar2ltj.ltj->size()]
     [assay.name <> Undefined]
     [i.id <> Undefined]
     [ar.id <> Undefined]
@@ -660,6 +670,7 @@ checkSource(
     (assay, ar): Steps
     (w, ar): TraceStep
 
+    [w.w2wj.wj.next->size() <> ar.ar2ltj.ltj->size()]
     [assay.name <> Undefined]
     [w.id <> Undefined]
     [ar.id <> Undefined]
@@ -678,7 +689,7 @@ checkSource(
     (mp, wj): WashPlate
     
 
-    [wj.next->size() = 0]
+    [ltj.previous->size() = 0]
 ){
     (wj, ltj): TraceJob
 }checkCorr(
@@ -688,6 +699,7 @@ checkSource(
 ){
 }
 end
+
 
 rule Incubate_Distribute
 checkSource(
@@ -701,6 +713,7 @@ checkSource(
     (assay, ds): Steps
     (i, ds): TraceStep
 
+    [i.i2ij.ij.next->size() <> ds.ds2ltj.ltj->size()]
     [assay.name <> Undefined]
     [i.id <> Undefined]
     [ds.id <> Undefined]
@@ -719,7 +732,7 @@ checkSource(
     (mp, ij): IncubatePlate
     
 
-    [ij.next->size() = 0]
+    [ltj.previous->size() = 0]
 ){
     (ij, ltj): TraceJob
 }checkCorr(

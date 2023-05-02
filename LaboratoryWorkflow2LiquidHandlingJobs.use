@@ -1,0 +1,5250 @@
+model LaboratoryWorkflow2LiquidHandlingJobs
+
+
+enum SampleState {Waiting, Processing, Finished, Error}
+
+class JobRequest
+operations
+	convertSampleEnum(state: SampleState): Integer = if state = SampleState::Waiting then 1 else 4 endif
+end
+
+class Sample
+attributes
+	sampleID: String
+	state: SampleState init = SampleState::Waiting
+operations
+	getId(): Integer = self.sampleID.substring(7, self.sampleID.size()).toInteger()
+	getPlateIndex(): Integer = (let tmp = self.getId().mod(96) in if tmp = 0 then 96 else tmp endif)
+	getSrcTubeOrder(): Integer = (let tmp = self.getId().mod(16) in if tmp = 0 then 16 else tmp endif)
+	getBatchMPOrder(): Integer = (let tmp = self.getPlateIndex() in ((tmp - 1)/8).floor() + 1)
+end
+
+class Assay
+attributes
+	name: String
+end
+
+abstract class ProtocoStep
+attributes
+	id: String
+end
+
+class Wash < ProtocoStep
+end
+
+class Incubate < ProtocoStep
+attributes
+	temperature: Real init = 293.15
+	duration: Integer init = 40
+end
+
+class DistributeSample < ProtocoStep
+attributes
+	volume: Real init = 0.0
+end
+
+
+class AddReagent < ProtocoStep
+attributes
+	volume: Real init = 0.0
+end
+
+class Reagent
+attributes
+	name: String
+end
+
+composition AssayRegistration between
+	JobRequest [1]
+	Assay [1] role assay
+end
+
+composition SampleRegistration between
+	JobRequest [0..1] role jr
+	Sample [*] role samples
+end
+
+composition Steps between
+	Assay [1]
+	ProtocoStep [*] role steps
+end
+
+composition Reagents between
+	Assay [0..1]
+	Reagent [*] role reagents
+end
+
+association TraceStep between
+	ProtocoStep [0..1] role previous
+	ProtocoStep [0..1] role next
+end
+
+association UsedReagentType between
+	Reagent [1] role rType
+	AddReagent [*] role jAdd
+end
+
+
+enum JobStatus {Planned, Executing, Succeeded, Failed}
+
+class JobCollection
+operations
+	convertJobEnum(status: JobStatus): Integer = (if status = JobStatus::Planned then 1 else 4 endif)
+	convertBarcodes(list: Sequence(String)): String = (list->asOrderedSet()->iterate(i; acc: String = '' | if i <> '' then acc + i + ' ' else acc endif))
+	convertCavity(list: Bag(String)): String = (list->collect(i | i.substring(7, i.size()).toInteger())->sortedBy(i | i)->iterate(i; acc: String = '' | acc + i.toString() + ' '))
+	--v4
+	genBarcodes(a: Integer, b: Integer): String = (Sequence{(a+1)..b}->iterate(i; acc: String = 'Sample' + a.toString() | acc + ' ' + 'Sample' + i.toString()))
+end
+
+abstract class Job
+attributes
+	state: JobStatus init = JobStatus::Planned
+	protocolStepName: String
+end
+
+abstract class Labware
+attributes
+	name: String
+end
+
+class LiquidTransferJob < Job
+operations
+	numOfTip(): Integer = self.tips->size()
+	targetCavities(): Sequence(Integer) = self.tips->iterate(i; acc: Sequence(Integer) = Sequence{} | acc->append(i.targetCavityIndex))
+	validTargetCavities(): Sequence(Integer) = self.tips->select(i | i.status <> JobStatus::Failed)->iterate(i; acc: Sequence(Integer) = Sequence{} | acc->append(i.targetCavityIndex))
+	findMinTrgTip(): TipLiquidTransfer = self.tips->sortedBy(e | e.targetCavityIndex)->first()
+	isFailed(): Boolean = if self.tips->exists(i | i.status = JobStatus::Failed) then true else false endif
+end
+
+class TipLiquidTransfer
+attributes
+	sourceCavityIndex: Integer
+	volume: Real init = 100.0
+	targetCavityIndex: Integer
+	status: JobStatus init = JobStatus::Planned 
+operations
+	getBatchMPOrder(): Integer = ((self.targetCavityIndex - 1)/8).floor() + 1
+end
+
+class WashJob < Job
+attributes
+	cavities: String
+operations
+	numOfCavity(): Integer = self.cavities.split(' ')->size()
+	numOfNextLTJ(): Integer = self.next->size()
+	numOfNextTips(): Integer = self.next->iterate(i; acc: Integer = 0 | acc + i.oclAsType(LiquidTransferJob).numOfTip())
+	findCavityByIndex(index: Integer): Integer = self.cavities.split(' ')->at(index).toInteger()
+end
+
+class IncubateJob < Job
+attributes
+	temperature: Real init = 293.15
+	duration: Integer
+operations
+	incubatedSamples(): String = self.previous->iterate(i; acc: Sequence(Integer) = Sequence{} | acc->union(i.oclAsType(LiquidTransferJob).validTargetCavities()))->sortedBy(i | i)->iterate(i; acc: String = '' | acc.concat(i.toString() + ' '))
+	numOfPreTips(): Integer = self.previous->iterate(i; acc: Integer = 0 | acc + i.oclAsType(LiquidTransferJob).numOfTip())
+end
+
+class Microplate < Labware
+operations
+end
+
+class Trough < Labware
+end
+
+class TubeRunner < Labware
+attributes
+	barcodes: String init = ''
+end
+
+
+composition JobRegistration between
+	JobCollection [1] role jc
+	Job [1..*] role jobs
+end
+
+composition LabwareRegistration between
+	JobCollection [0..1] role jc
+	Labware [*] role labware
+end
+
+association TraceJob between
+	Job [0..*] role previous
+	Job [0..*] role next
+end
+
+composition Tips between
+	LiquidTransferJob [1] role pJob
+	TipLiquidTransfer [1..8] role tips ordered
+end
+
+association IncubatePlate between
+	Microplate [1] role tPlateI
+	IncubateJob [*] role jInI
+end
+
+association WashPlate between
+	Microplate [1] role tPlateW
+	WashJob [*] role jInW
+end
+
+association SrcTransfer between
+	Labware [1] role source
+	LiquidTransferJob [*] role sJob ordered
+end
+
+association TrgTransfer between
+	Labware [1] role target
+	LiquidTransferJob [*] role tJob ordered
+end
+
+
+---------- CorrPart ----------
+class JR2JC
+end
+
+class R2T
+end
+
+class S2TR
+end
+
+class S2MP
+end
+
+class S2TLT
+end
+
+class DS2LTJ
+end
+
+class I2IJ
+end
+
+class I2MP
+end
+
+class W2WJ
+end
+
+class AR2TLT
+end
+
+class AR2LTJ
+end
+
+association JR2JC_JobRequest between
+  JobRequest[1] role jr
+  JR2JC[0..1] role jr2jc
+end
+
+association JR2JC_JobCollection between
+  JobCollection[1] role jc
+  JR2JC[0..1] role jr2jc
+end
+
+association R2T_Reagent between
+  Reagent[1] role r
+  R2T[0..1] role r2t
+end
+
+association R2T_Trough between
+  Trough[1] role t
+  R2T[0..1] role r2t
+end
+
+association S2TR_Sample between
+  Sample[1] role s
+  S2TR[0..1] role s2tr
+end
+
+association S2TR_TubeRunner between
+  TubeRunner[1] role tr
+  S2TR[*] role s2tr
+end
+
+association S2MP_Sample between
+  Sample[1] role s
+  S2MP[0..1] role s2mp
+end
+
+association S2MP_Microplate between
+  Microplate[1] role mp
+  S2MP[*] role s2mp
+end
+
+association S2TLT_Sample between
+  Sample[1] role s
+  S2TLT[*] role s2tlt
+end
+
+association S2TLT_TipLiquidTransfer between
+  TipLiquidTransfer[1] role tlt
+  S2TLT[0..1] role s2tlt
+end
+
+association DS2LTJ_DistributeSample between
+  DistributeSample[1] role ds
+  DS2LTJ[*] role ds2ltj
+end
+
+association DS2LTJ_LiquidTransferJob between
+  LiquidTransferJob[1] role ltj
+  DS2LTJ[0..1] role ds2ltj
+end
+
+association I2IJ_Incubate between
+  Incubate[1] role i
+  I2IJ[*] role i2ij
+end
+
+association I2IJ_IncubateJob between
+  IncubateJob[1] role ij
+  I2IJ[0..1] role i2ij
+end
+
+association I2MP_Incubate between
+  Incubate[1] role i
+  I2MP[*] role i2mp
+end
+
+association I2MP_Microplate between
+  Microplate[1] role mp
+  I2MP[*] role i2mp
+end
+
+association W2WJ_Wash between
+  Wash[1] role w
+  W2WJ[*] role w2wj
+end
+
+association W2WJ_WashJob between
+  WashJob[1] role wj
+  W2WJ[0..1] role w2wj
+end
+
+association AR2TLT_Sample between
+  Sample[1] role s
+  AR2TLT[*] role ar2tlt
+end
+
+association AR2TLT_TipLiquidTransfer between
+  TipLiquidTransfer[1] role tlt
+  AR2TLT[0..1] role ar2tlt
+end
+
+association AR2LTJ_AddReagent between
+  AddReagent[1] role ar
+  AR2LTJ[*] role ar2ltj
+end
+
+association AR2LTJ_LiquidTransferJob between
+  LiquidTransferJob[1] role ltj
+  AR2LTJ[0..1] role ar2ltj
+end
+
+---------- Correlation invariants ----------
+constraints
+context R2T inv:
+    self.r.name = self.t.name
+context S2TR inv:
+    self.tr.barcodes.split(' ')->count(self.s.sampleID) = 1
+context S2TR inv:
+    self.tr.barcodes.split(' ')->count(self.s.sampleID) = 1
+context S2MP inv:
+    not (self.mp.name = Undefined)
+context S2TLT inv:
+    true = true and true = true and true = true
+context DS2LTJ inv:
+    true = true
+context S2TLT inv:
+    true = true and true = true and true = true
+context I2IJ inv:
+    self.ij.protocolStepName = self.i.id and self.ij.temperature = self.i.temperature and self.ij.duration = self.i.duration
+context I2IJ inv:
+    self.ij.protocolStepName = self.i.id and self.ij.temperature = self.i.temperature and self.ij.duration = self.i.duration
+context W2WJ inv:
+    self.wj.protocolStepName = self.w.id and not (self.wj.cavities = Undefined)
+context AR2TLT inv:
+    true = true and true = true
+context AR2LTJ inv:
+    true = true
+context AR2TLT inv:
+    true = true and true = true
+
+---------- RuleCollection ----------
+class RuleCollection
+operations
+---------- Forward transformations ----------
+JobReq2JobCol_forwTrafo (
+    matchSR: Tuple(jr: JobRequest))
+reagent2trough_forwTrafo (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, r: Reagent),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTL: Tuple(jc: JobCollection))
+Sample2NewTubeRunner_forwTrafo (
+    matchSR: Tuple(jr: JobRequest, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTL: Tuple(jc: JobCollection))
+Sample2ExistTubeRunner_forwTrafo (
+    matchSR: Tuple(jr: JobRequest, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTL: Tuple(jc: JobCollection, tr: TubeRunner))
+InitNewMicroplate_forwTrafo (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTL: Tuple(jc: JobCollection))
+SampleAssignExistMicroplate_forwTrafo (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTL: Tuple(jc: JobCollection, mp: Microplate))
+DistributeSample_New_forwTrafo (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, ds: DistributeSample, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC, s2tr: S2TR, s2mp: S2MP),
+    matchTL: Tuple(jc: JobCollection, tr: TubeRunner, mp: Microplate))
+DistributeSample_Exist_forwTrafo (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, ds: DistributeSample, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC, s2tr: S2TR, s2mp: S2MP, ds2ltj: DS2LTJ),
+    matchTL: Tuple(jc: JobCollection, tr: TubeRunner, mp: Microplate, ltj: LiquidTransferJob))
+IncubateJob_New_1_forwTrafo (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, i: Incubate),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTL: Tuple(jc: JobCollection, mp: Microplate))
+IncubateJob_New_2_forwTrafo (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, i: Incubate),
+    matchCL: Tuple(jr2jc: JR2JC, i2ij1: I2IJ),
+    matchTL: Tuple(jc: JobCollection, mp: Microplate, ij1: IncubateJob))
+WashJob_New_forwTrafo (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, w: Wash, i: Incubate),
+    matchCL: Tuple(jr2jc: JR2JC, i2ij: I2IJ),
+    matchTL: Tuple(jc: JobCollection, mp: Microplate, ij: IncubateJob))
+AddReagent_New_forwTrafo (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, ar: AddReagent, r: Reagent, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC, s2mp: S2MP, r2t: R2T),
+    matchTL: Tuple(jc: JobCollection, mp: Microplate, t: Trough))
+AddReagent_Exist_forwTrafo (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, ar: AddReagent, r: Reagent, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC, s2mp: S2MP, r2t: R2T, ar2ltj: AR2LTJ),
+    matchTL: Tuple(jc: JobCollection, mp: Microplate, t: Trough, ltj: LiquidTransferJob))
+Distribute_IncubateJob_forwTrafo (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, ds: DistributeSample, i: Incubate),
+    matchCL: Tuple(jr2jc: JR2JC, ds2ltj: DS2LTJ, i2ij: I2IJ),
+    matchTL: Tuple(jc: JobCollection, mp: Microplate, ltj: LiquidTransferJob, ij: IncubateJob))
+AddReagent_IncubateJob_forwTrafo (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, i: Incubate, ar: AddReagent),
+    matchCL: Tuple(jr2jc: JR2JC, ar2ltj: AR2LTJ, i2ij: I2IJ),
+    matchTL: Tuple(jc: JobCollection, mp: Microplate, ltj: LiquidTransferJob, ij: IncubateJob))
+WashJob_AddReagent_forwTrafo (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, w: Wash, ar: AddReagent),
+    matchCL: Tuple(jr2jc: JR2JC, ar2ltj: AR2LTJ, w2wj: W2WJ),
+    matchTL: Tuple(jc: JobCollection, mp: Microplate, ltj: LiquidTransferJob, wj: WashJob))
+Incubate_Distribute_forwTrafo (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, i: Incubate, ds: DistributeSample),
+    matchCL: Tuple(jr2jc: JR2JC, ds2ltj: DS2LTJ, i2ij: I2IJ),
+    matchTL: Tuple(jc: JobCollection, mp: Microplate, ltj: LiquidTransferJob, ij: IncubateJob))
+
+---------- Backward transformations ----------
+JobReq2JobCol_backTrafo (
+    matchTR: Tuple(jc: JobCollection))
+reagent2trough_backTrafo (
+    matchSL: Tuple(jr: JobRequest, assay: Assay),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTR: Tuple(jc: JobCollection, t: Trough))
+Sample2NewTubeRunner_backTrafo (
+    matchSL: Tuple(jr: JobRequest, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTR: Tuple(jc: JobCollection, tr: TubeRunner))
+Sample2ExistTubeRunner_backTrafo (
+    matchSL: Tuple(jr: JobRequest, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTR: Tuple(jc: JobCollection, tr: TubeRunner))
+InitNewMicroplate_backTrafo (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTR: Tuple(jc: JobCollection, mp: Microplate))
+SampleAssignExistMicroplate_backTrafo (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTR: Tuple(jc: JobCollection, mp: Microplate))
+DistributeSample_New_backTrafo (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, ds: DistributeSample, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC, s2tr: S2TR, s2mp: S2MP),
+    matchTR: Tuple(jc: JobCollection, tr: TubeRunner, mp: Microplate, ltj: LiquidTransferJob, tlt: TipLiquidTransfer))
+DistributeSample_Exist_backTrafo (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, ds: DistributeSample, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC, s2tr: S2TR, s2mp: S2MP, ds2ltj: DS2LTJ),
+    matchTR: Tuple(jc: JobCollection, tr: TubeRunner, mp: Microplate, ltj: LiquidTransferJob, tlt: TipLiquidTransfer))
+IncubateJob_New_1_backTrafo (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, i: Incubate),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTR: Tuple(jc: JobCollection, mp: Microplate, ij: IncubateJob))
+IncubateJob_New_2_backTrafo (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, i: Incubate),
+    matchCL: Tuple(jr2jc: JR2JC, i2ij1: I2IJ),
+    matchTR: Tuple(jc: JobCollection, mp: Microplate, ij1: IncubateJob, ij2: IncubateJob))
+WashJob_New_backTrafo (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, w: Wash, i: Incubate),
+    matchCL: Tuple(jr2jc: JR2JC, i2ij: I2IJ),
+    matchTR: Tuple(jc: JobCollection, mp: Microplate, ij: IncubateJob, wj: WashJob))
+AddReagent_New_backTrafo (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, ar: AddReagent, r: Reagent, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC, s2mp: S2MP, r2t: R2T),
+    matchTR: Tuple(jc: JobCollection, mp: Microplate, t: Trough, ltj: LiquidTransferJob, tlt: TipLiquidTransfer))
+AddReagent_Exist_backTrafo (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, ar: AddReagent, r: Reagent, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC, s2mp: S2MP, r2t: R2T, ar2ltj: AR2LTJ),
+    matchTR: Tuple(jc: JobCollection, mp: Microplate, t: Trough, ltj: LiquidTransferJob, tlt: TipLiquidTransfer))
+Distribute_IncubateJob_backTrafo (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, ds: DistributeSample, i: Incubate),
+    matchCL: Tuple(jr2jc: JR2JC, ds2ltj: DS2LTJ, i2ij: I2IJ),
+    matchTR: Tuple(jc: JobCollection, mp: Microplate, ltj: LiquidTransferJob, ij: IncubateJob))
+AddReagent_IncubateJob_backTrafo (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, i: Incubate, ar: AddReagent),
+    matchCL: Tuple(jr2jc: JR2JC, ar2ltj: AR2LTJ, i2ij: I2IJ),
+    matchTR: Tuple(jc: JobCollection, mp: Microplate, ltj: LiquidTransferJob, ij: IncubateJob))
+WashJob_AddReagent_backTrafo (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, w: Wash, ar: AddReagent),
+    matchCL: Tuple(jr2jc: JR2JC, ar2ltj: AR2LTJ, w2wj: W2WJ),
+    matchTR: Tuple(jc: JobCollection, mp: Microplate, ltj: LiquidTransferJob, wj: WashJob))
+Incubate_Distribute_backTrafo (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, i: Incubate, ds: DistributeSample),
+    matchCL: Tuple(jr2jc: JR2JC, ds2ltj: DS2LTJ, i2ij: I2IJ),
+    matchTR: Tuple(jc: JobCollection, mp: Microplate, ltj: LiquidTransferJob, ij: IncubateJob))
+
+---------- Integration transformations ----------
+JobReq2JobCol_integration (
+    matchSR: Tuple(jr: JobRequest),
+    matchTR: Tuple(jc: JobCollection))
+reagent2trough_integration (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, r: Reagent),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTR: Tuple(jc: JobCollection, t: Trough))
+Sample2NewTubeRunner_integration (
+    matchSR: Tuple(jr: JobRequest, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTR: Tuple(jc: JobCollection, tr: TubeRunner))
+Sample2ExistTubeRunner_integration (
+    matchSR: Tuple(jr: JobRequest, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTR: Tuple(jc: JobCollection, tr: TubeRunner))
+InitNewMicroplate_integration (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTR: Tuple(jc: JobCollection, mp: Microplate))
+SampleAssignExistMicroplate_integration (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTR: Tuple(jc: JobCollection, mp: Microplate))
+DistributeSample_New_integration (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, ds: DistributeSample, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC, s2tr: S2TR, s2mp: S2MP),
+    matchTR: Tuple(jc: JobCollection, tr: TubeRunner, mp: Microplate, ltj: LiquidTransferJob, tlt: TipLiquidTransfer))
+DistributeSample_Exist_integration (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, ds: DistributeSample, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC, s2tr: S2TR, s2mp: S2MP, ds2ltj: DS2LTJ),
+    matchTR: Tuple(jc: JobCollection, tr: TubeRunner, mp: Microplate, ltj: LiquidTransferJob, tlt: TipLiquidTransfer))
+IncubateJob_New_1_integration (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, i: Incubate),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTR: Tuple(jc: JobCollection, mp: Microplate, ij: IncubateJob))
+IncubateJob_New_2_integration (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, i: Incubate),
+    matchCL: Tuple(jr2jc: JR2JC, i2ij1: I2IJ),
+    matchTR: Tuple(jc: JobCollection, mp: Microplate, ij1: IncubateJob, ij2: IncubateJob))
+WashJob_New_integration (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, w: Wash, i: Incubate),
+    matchCL: Tuple(jr2jc: JR2JC, i2ij: I2IJ),
+    matchTR: Tuple(jc: JobCollection, mp: Microplate, ij: IncubateJob, wj: WashJob))
+AddReagent_New_integration (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, ar: AddReagent, r: Reagent, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC, s2mp: S2MP, r2t: R2T),
+    matchTR: Tuple(jc: JobCollection, mp: Microplate, t: Trough, ltj: LiquidTransferJob, tlt: TipLiquidTransfer))
+AddReagent_Exist_integration (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, ar: AddReagent, r: Reagent, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC, s2mp: S2MP, r2t: R2T, ar2ltj: AR2LTJ),
+    matchTR: Tuple(jc: JobCollection, mp: Microplate, t: Trough, ltj: LiquidTransferJob, tlt: TipLiquidTransfer))
+Distribute_IncubateJob_integration (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, ds: DistributeSample, i: Incubate),
+    matchCL: Tuple(jr2jc: JR2JC, ds2ltj: DS2LTJ, i2ij: I2IJ),
+    matchTR: Tuple(jc: JobCollection, mp: Microplate, ltj: LiquidTransferJob, ij: IncubateJob))
+AddReagent_IncubateJob_integration (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, i: Incubate, ar: AddReagent),
+    matchCL: Tuple(jr2jc: JR2JC, ar2ltj: AR2LTJ, i2ij: I2IJ),
+    matchTR: Tuple(jc: JobCollection, mp: Microplate, ltj: LiquidTransferJob, ij: IncubateJob))
+WashJob_AddReagent_integration (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, w: Wash, ar: AddReagent),
+    matchCL: Tuple(jr2jc: JR2JC, ar2ltj: AR2LTJ, w2wj: W2WJ),
+    matchTR: Tuple(jc: JobCollection, mp: Microplate, ltj: LiquidTransferJob, wj: WashJob))
+Incubate_Distribute_integration (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, i: Incubate, ds: DistributeSample),
+    matchCL: Tuple(jr2jc: JR2JC, ds2ltj: DS2LTJ, i2ij: I2IJ),
+    matchTR: Tuple(jc: JobCollection, mp: Microplate, ltj: LiquidTransferJob, ij: IncubateJob))
+
+---------- Co-evolution transformations ----------
+JobReq2JobCol_coEvol ()
+reagent2trough_coEvol (
+    matchSL: Tuple(jr: JobRequest, assay: Assay),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTL: Tuple(jc: JobCollection))
+Sample2NewTubeRunner_coEvol (
+    matchSL: Tuple(jr: JobRequest, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTL: Tuple(jc: JobCollection))
+Sample2ExistTubeRunner_coEvol (
+    matchSL: Tuple(jr: JobRequest, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTL: Tuple(jc: JobCollection, tr: TubeRunner))
+InitNewMicroplate_coEvol (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTL: Tuple(jc: JobCollection))
+SampleAssignExistMicroplate_coEvol (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTL: Tuple(jc: JobCollection, mp: Microplate))
+DistributeSample_New_coEvol (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, ds: DistributeSample, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC, s2tr: S2TR, s2mp: S2MP),
+    matchTL: Tuple(jc: JobCollection, tr: TubeRunner, mp: Microplate))
+DistributeSample_Exist_coEvol (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, ds: DistributeSample, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC, s2tr: S2TR, s2mp: S2MP, ds2ltj: DS2LTJ),
+    matchTL: Tuple(jc: JobCollection, tr: TubeRunner, mp: Microplate, ltj: LiquidTransferJob))
+IncubateJob_New_1_coEvol (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, i: Incubate),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTL: Tuple(jc: JobCollection, mp: Microplate))
+IncubateJob_New_2_coEvol (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, i: Incubate),
+    matchCL: Tuple(jr2jc: JR2JC, i2ij1: I2IJ),
+    matchTL: Tuple(jc: JobCollection, mp: Microplate, ij1: IncubateJob))
+WashJob_New_coEvol (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, w: Wash, i: Incubate),
+    matchCL: Tuple(jr2jc: JR2JC, i2ij: I2IJ),
+    matchTL: Tuple(jc: JobCollection, mp: Microplate, ij: IncubateJob))
+AddReagent_New_coEvol (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, ar: AddReagent, r: Reagent, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC, s2mp: S2MP, r2t: R2T),
+    matchTL: Tuple(jc: JobCollection, mp: Microplate, t: Trough))
+AddReagent_Exist_coEvol (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, ar: AddReagent, r: Reagent, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC, s2mp: S2MP, r2t: R2T, ar2ltj: AR2LTJ),
+    matchTL: Tuple(jc: JobCollection, mp: Microplate, t: Trough, ltj: LiquidTransferJob))
+Distribute_IncubateJob_coEvol (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, ds: DistributeSample, i: Incubate),
+    matchCL: Tuple(jr2jc: JR2JC, ds2ltj: DS2LTJ, i2ij: I2IJ),
+    matchTL: Tuple(jc: JobCollection, mp: Microplate, ltj: LiquidTransferJob, ij: IncubateJob))
+AddReagent_IncubateJob_coEvol (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, i: Incubate, ar: AddReagent),
+    matchCL: Tuple(jr2jc: JR2JC, ar2ltj: AR2LTJ, i2ij: I2IJ),
+    matchTL: Tuple(jc: JobCollection, mp: Microplate, ltj: LiquidTransferJob, ij: IncubateJob))
+WashJob_AddReagent_coEvol (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, w: Wash, ar: AddReagent),
+    matchCL: Tuple(jr2jc: JR2JC, ar2ltj: AR2LTJ, w2wj: W2WJ),
+    matchTL: Tuple(jc: JobCollection, mp: Microplate, ltj: LiquidTransferJob, wj: WashJob))
+Incubate_Distribute_coEvol (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, i: Incubate, ds: DistributeSample),
+    matchCL: Tuple(jr2jc: JR2JC, ds2ltj: DS2LTJ, i2ij: I2IJ),
+    matchTL: Tuple(jc: JobCollection, mp: Microplate, ltj: LiquidTransferJob, ij: IncubateJob))
+end
+
+
+---------- Transformation constraints ----------
+constraints
+context RuleCollection::JobReq2JobCol_forwTrafo (
+    matchSR: Tuple(jr: JobRequest))
+pre JobReq2JobCol_forwTrafo_pre: 
+let jr:JobRequest = matchSR.jr in
+jr.jr2jc->size() = 0
+
+post JobReq2JobCol_forwTrafo_post:
+let jr:JobRequest = matchSR.jr in
+(JobCollection.allInstances - JobCollection.allInstances@pre)->exists(jc|
+(JR2JC.allInstances - JR2JC.allInstances@pre)->exists(jr2jc|
+jr.jr2jc->includes(jr2jc) and
+jr2jc.jr->includes(jr) and
+jc.jr2jc->includes(jr2jc) and
+jr2jc.jc->includes(jc)))
+
+context RuleCollection::reagent2trough_forwTrafo (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, r: Reagent),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTL: Tuple(jc: JobCollection))
+pre reagent2trough_forwTrafo_pre: 
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let r:Reagent = matchSR.r in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTL.jc in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+assay.name <> Undefined and
+r.assay->includes(assay) and 
+assay.reagents->includes(r) and 
+r.name <> Undefined and 
+r.r2t = Undefined and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and
+r.r2t->size() = 0
+
+post reagent2trough_forwTrafo_post:
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let r:Reagent = matchSR.r in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTL.jc in
+JobCollection.allInstances->includesAll(Set {jc})
+ and
+(Trough.allInstances - Trough.allInstances@pre)->exists(t|
+t.jc->includes(jc) and
+jc.labware->includes(t) and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+(R2T.allInstances - R2T.allInstances@pre)->exists(r2t|
+r2t.r->includes(r) and
+r.r2t->includes(r2t) and
+r2t.t->includes(t) and
+t.r2t->includes(r2t) and
+r2t.r.name = r2t.t.name))
+
+context RuleCollection::Sample2NewTubeRunner_forwTrafo (
+    matchSR: Tuple(jr: JobRequest, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTL: Tuple(jc: JobCollection))
+pre Sample2NewTubeRunner_forwTrafo_pre: 
+let jr:JobRequest = matchSR.jr in
+let s:Sample = matchSR.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTL.jc in
+jr.samples->includes(s) and 
+s.jr->includes(jr) and 
+S2TR.allInstances()->size() <> Sample.allInstances()->size() and 
+s.s2tr = Undefined and 
+s.sampleID <> Undefined and 
+s.state = SampleState::Waiting and 
+S2TR.allInstances()->size() + 1 = s.getId() and 
+S2TR.allInstances()->size().mod(16) = 0 and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and
+s.s2tr->size() = 0
+
+post Sample2NewTubeRunner_forwTrafo_post:
+let jr:JobRequest = matchSR.jr in
+let s:Sample = matchSR.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTL.jc in
+JobCollection.allInstances->includesAll(Set {jc})
+ and
+(TubeRunner.allInstances - TubeRunner.allInstances@pre)->exists(tr|
+tr.jc->includes(jc) and
+jc.labware->includes(tr) and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+(S2TR.allInstances - S2TR.allInstances@pre)->exists(s2tr|
+s.s2tr->includes(s2tr) and
+s2tr.s->includes(s) and
+s2tr.tr->includes(tr) and
+tr.s2tr->includes(s2tr) and
+s2tr.tr.barcodes.split(' ')->count(s2tr.s.sampleID) = 1))
+
+context RuleCollection::Sample2ExistTubeRunner_forwTrafo (
+    matchSR: Tuple(jr: JobRequest, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTL: Tuple(jc: JobCollection, tr: TubeRunner))
+pre Sample2ExistTubeRunner_forwTrafo_pre: 
+let jr:JobRequest = matchSR.jr in
+let s:Sample = matchSR.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTL.jc in
+let tr:TubeRunner = matchTL.tr in
+jr.samples->includes(s) and 
+s.jr->includes(jr) and 
+S2TR.allInstances()->size() <> Sample.allInstances()->size() and 
+s.s2tr = Undefined and 
+s.sampleID <> Undefined and 
+s.state = SampleState::Waiting and 
+S2TR.allInstances()->size() + 1 = s.getId() and
+tr.jc->includes(jc) and 
+jc.labware->includes(tr) and 
+tr.barcodes.split(' ')->size() < 16 and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and
+s.s2tr->size() = 0
+
+post Sample2ExistTubeRunner_forwTrafo_post:
+let jr:JobRequest = matchSR.jr in
+let s:Sample = matchSR.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTL.jc in
+let tr:TubeRunner = matchTL.tr in
+JobCollection.allInstances->includesAll(Set {jc})
+ and
+TubeRunner.allInstances->includesAll(Set {tr})
+ and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+(S2TR.allInstances - S2TR.allInstances@pre)->exists(s2tr|
+s.s2tr->includes(s2tr) and
+s2tr.s->includes(s) and
+s2tr.tr->includes(tr) and
+tr.s2tr->includes(s2tr) and
+s2tr.tr.barcodes.split(' ')->count(s2tr.s.sampleID) = 1)
+
+context RuleCollection::InitNewMicroplate_forwTrafo (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTL: Tuple(jc: JobCollection))
+pre InitNewMicroplate_forwTrafo_pre: 
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let s:Sample = matchSR.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTL.jc in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+jr.samples->includes(s) and 
+s.jr->includes(jr) and 
+S2MP.allInstances()->size() <> Sample.allInstances()->size() and 
+assay.name <> Undefined and 
+s.sampleID <> Undefined and 
+s.s2mp = Undefined and 
+S2MP.allInstances()->size() + 1 = s.getId() and 
+S2MP.allInstances()->size().mod(96) = 0 and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and
+s.s2mp->size() = 0
+
+post InitNewMicroplate_forwTrafo_post:
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let s:Sample = matchSR.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTL.jc in
+JobCollection.allInstances->includesAll(Set {jc})
+ and
+(Microplate.allInstances - Microplate.allInstances@pre)->exists(mp|
+jc.labware->includes(mp) and
+mp.jc->includes(jc) and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+(S2MP.allInstances - S2MP.allInstances@pre)->exists(s2mp|
+s2mp.s->includes(s) and
+s.s2mp->includes(s2mp) and
+mp.s2mp->includes(s2mp) and
+s2mp.mp->includes(mp) and
+not (s2mp.mp.name = Undefined)))
+
+context RuleCollection::SampleAssignExistMicroplate_forwTrafo (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTL: Tuple(jc: JobCollection, mp: Microplate))
+pre SampleAssignExistMicroplate_forwTrafo_pre: 
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let s:Sample = matchSR.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTL.jc in
+let mp:Microplate = matchTL.mp in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+jr.samples->includes(s) and 
+s.jr->includes(jr) and 
+S2MP.allInstances()->size() <> Sample.allInstances()->size() and 
+S2MP.allInstances()->size() + 1 = s.getId() and 
+assay.name <> Undefined and 
+s.sampleID <> Undefined and 
+s.s2mp = Undefined and
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and 
+mp.s2mp->size() < 96 and 
+mp.name <> '' and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and
+s.s2mp->size() = 0
+
+post SampleAssignExistMicroplate_forwTrafo_post:
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let s:Sample = matchSR.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTL.jc in
+let mp:Microplate = matchTL.mp in
+JobCollection.allInstances->includesAll(Set {jc})
+ and
+Microplate.allInstances->includesAll(Set {mp})
+ and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+(S2MP.allInstances - S2MP.allInstances@pre)->exists(s2mp|
+s2mp.s->includes(s) and
+s.s2mp->includes(s2mp) and
+mp.s2mp->includes(s2mp) and
+s2mp.mp->includes(mp))
+
+context RuleCollection::DistributeSample_New_forwTrafo (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, ds: DistributeSample, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC, s2tr: S2TR, s2mp: S2MP),
+    matchTL: Tuple(jc: JobCollection, tr: TubeRunner, mp: Microplate))
+pre DistributeSample_New_forwTrafo_pre: 
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let ds:DistributeSample = matchSR.ds in
+let s:Sample = matchSR.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let s2tr:S2TR = matchCL.s2tr in
+let s2mp:S2MP = matchCL.s2mp in
+let jc:JobCollection = matchTL.jc in
+let tr:TubeRunner = matchTL.tr in
+let mp:Microplate = matchTL.mp in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+ds.assay->includes(assay) and 
+assay.steps->includes(ds) and 
+jr.samples->includes(s) and 
+s.jr->includes(jr) and 
+ds.ds2ltj.ltj.tips->size() <> Sample.allInstances()->size() and 
+ds.ds2ltj.ltj.tips->size() + 1 = s.getId() and 
+ds.ds2ltj.ltj.tips->size().mod(8) = 0 and
+tr.jc->includes(jc) and 
+jc.labware->includes(tr) and 
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and 
+s.s2tr->includes(s2tr) and 
+s2tr.s->includes(s) and 
+s2tr.tr->includes(tr) and 
+tr.s2tr->includes(s2tr) and 
+s2mp.s->includes(s) and 
+s.s2mp->includes(s2mp) and 
+mp.s2mp->includes(s2mp) and 
+s2mp.mp->includes(mp)
+
+post DistributeSample_New_forwTrafo_post:
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let ds:DistributeSample = matchSR.ds in
+let s:Sample = matchSR.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let s2tr:S2TR = matchCL.s2tr in
+let s2mp:S2MP = matchCL.s2mp in
+let jc:JobCollection = matchTL.jc in
+let tr:TubeRunner = matchTL.tr in
+let mp:Microplate = matchTL.mp in
+JobCollection.allInstances->includesAll(Set {jc})
+ and
+TubeRunner.allInstances->includesAll(Set {tr})
+ and
+Microplate.allInstances->includesAll(Set {mp})
+ and
+(LiquidTransferJob.allInstances - LiquidTransferJob.allInstances@pre)->exists(ltj|
+(TipLiquidTransfer.allInstances - TipLiquidTransfer.allInstances@pre)->exists(tlt|
+jc.jobs->includes(ltj) and
+ltj.jc->includes(jc) and
+tr.sJob->includes(ltj) and
+ltj.source->includes(tr) and
+ltj.target->includes(mp) and
+mp.tJob->includes(ltj) and
+ltj.tips->includes(tlt) and
+tlt.pJob->includes(ltj) and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+S2TR.allInstances->includesAll(Set {s2tr})
+ and
+S2MP.allInstances->includesAll(Set {s2mp})
+ and
+(S2TLT.allInstances - S2TLT.allInstances@pre)->exists(s2tlt|
+(DS2LTJ.allInstances - DS2LTJ.allInstances@pre)->exists(ds2ltj|
+s.s2tlt->includes(s2tlt) and
+s2tlt.s->includes(s) and
+s2tlt.tlt->includes(tlt) and
+tlt.s2tlt->includes(s2tlt) and
+ds.ds2ltj->includes(ds2ltj) and
+ds2ltj.ds->includes(ds) and
+ds2ltj.ltj->includes(ltj) and
+ltj.ds2ltj->includes(ds2ltj) and
+true = true and
+true = true and
+true = true and
+true = true))))
+
+context RuleCollection::DistributeSample_Exist_forwTrafo (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, ds: DistributeSample, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC, s2tr: S2TR, s2mp: S2MP, ds2ltj: DS2LTJ),
+    matchTL: Tuple(jc: JobCollection, tr: TubeRunner, mp: Microplate, ltj: LiquidTransferJob))
+pre DistributeSample_Exist_forwTrafo_pre: 
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let ds:DistributeSample = matchSR.ds in
+let s:Sample = matchSR.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let s2tr:S2TR = matchCL.s2tr in
+let s2mp:S2MP = matchCL.s2mp in
+let ds2ltj:DS2LTJ = matchCL.ds2ltj in
+let jc:JobCollection = matchTL.jc in
+let tr:TubeRunner = matchTL.tr in
+let mp:Microplate = matchTL.mp in
+let ltj:LiquidTransferJob = matchTL.ltj in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+ds.assay->includes(assay) and 
+assay.steps->includes(ds) and 
+jr.samples->includes(s) and 
+s.jr->includes(jr) and 
+ds.ds2ltj.ltj.tips->size() <> Sample.allInstances()->size() and 
+ds.ds2ltj.ltj.tips->size() + 1 = s.getId() and 
+ds.ds2ltj.ltj.tips->size().mod(8) <> 0 and
+tr.jc->includes(jc) and 
+jc.labware->includes(tr) and 
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and 
+jc.jobs->includes(ltj) and 
+ltj.jc->includes(jc) and 
+tr.sJob->includes(ltj) and 
+ltj.source->includes(tr) and 
+ltj.target->includes(mp) and 
+mp.tJob->includes(ltj) and 
+ltj.tips->size() < 8 and
+ltj.tips->size() < 8 and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and 
+s.s2tr->includes(s2tr) and 
+s2tr.s->includes(s) and 
+s2tr.tr->includes(tr) and 
+tr.s2tr->includes(s2tr) and 
+s2mp.s->includes(s) and 
+s.s2mp->includes(s2mp) and 
+mp.s2mp->includes(s2mp) and 
+s2mp.mp->includes(mp) and 
+ds.ds2ltj->includes(ds2ltj) and 
+ds2ltj.ds->includes(ds) and 
+ds2ltj.ltj->includes(ltj) and 
+ltj.ds2ltj->includes(ds2ltj)
+
+post DistributeSample_Exist_forwTrafo_post:
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let ds:DistributeSample = matchSR.ds in
+let s:Sample = matchSR.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let s2tr:S2TR = matchCL.s2tr in
+let s2mp:S2MP = matchCL.s2mp in
+let ds2ltj:DS2LTJ = matchCL.ds2ltj in
+let jc:JobCollection = matchTL.jc in
+let tr:TubeRunner = matchTL.tr in
+let mp:Microplate = matchTL.mp in
+let ltj:LiquidTransferJob = matchTL.ltj in
+JobCollection.allInstances->includesAll(Set {jc})
+ and
+TubeRunner.allInstances->includesAll(Set {tr})
+ and
+Microplate.allInstances->includesAll(Set {mp})
+ and
+LiquidTransferJob.allInstances->includesAll(Set {ltj})
+ and
+(TipLiquidTransfer.allInstances - TipLiquidTransfer.allInstances@pre)->exists(tlt|
+ltj.tips->includes(tlt) and
+tlt.pJob->includes(ltj) and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+S2TR.allInstances->includesAll(Set {s2tr})
+ and
+S2MP.allInstances->includesAll(Set {s2mp})
+ and
+DS2LTJ.allInstances->includesAll(Set {ds2ltj})
+ and
+(S2TLT.allInstances - S2TLT.allInstances@pre)->exists(s2tlt|
+s.s2tlt->includes(s2tlt) and
+s2tlt.s->includes(s) and
+s2tlt.tlt->includes(tlt) and
+tlt.s2tlt->includes(s2tlt) and
+true = true and
+true = true and
+true = true))
+
+context RuleCollection::IncubateJob_New_1_forwTrafo (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, i: Incubate),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTL: Tuple(jc: JobCollection, mp: Microplate))
+pre IncubateJob_New_1_forwTrafo_pre: 
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let i:Incubate = matchSR.i in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTL.jc in
+let mp:Microplate = matchTL.mp in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+i.assay->includes(assay) and 
+assay.steps->includes(i) and 
+i.i2ij.ij->size() = 0 and 
+assay.name <> Undefined and 
+i.id <> Undefined and
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc)
+
+post IncubateJob_New_1_forwTrafo_post:
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let i:Incubate = matchSR.i in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTL.jc in
+let mp:Microplate = matchTL.mp in
+JobCollection.allInstances->includesAll(Set {jc})
+ and
+Microplate.allInstances->includesAll(Set {mp})
+ and
+(IncubateJob.allInstances - IncubateJob.allInstances@pre)->exists(ij|
+ij.jc->includes(jc) and
+jc.jobs->includes(ij) and
+mp.jInI->includes(ij) and
+ij.tPlateI->includes(mp) and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+(I2IJ.allInstances - I2IJ.allInstances@pre)->exists(i2ij|
+(I2MP.allInstances - I2MP.allInstances@pre)->exists(i2mp|
+i2ij.i->includes(i) and
+i.i2ij->includes(i2ij) and
+i2ij.ij->includes(ij) and
+ij.i2ij->includes(i2ij) and
+i2mp.i->includes(i) and
+i.i2mp->includes(i2mp) and
+mp.i2mp->includes(i2mp) and
+i2mp.mp->includes(mp) and
+i2ij.ij.protocolStepName = i2ij.i.id and
+i2ij.ij.temperature = i2ij.i.temperature and
+i2ij.ij.duration = i2ij.i.duration)))
+
+context RuleCollection::IncubateJob_New_2_forwTrafo (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, i: Incubate),
+    matchCL: Tuple(jr2jc: JR2JC, i2ij1: I2IJ),
+    matchTL: Tuple(jc: JobCollection, mp: Microplate, ij1: IncubateJob))
+pre IncubateJob_New_2_forwTrafo_pre: 
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let i:Incubate = matchSR.i in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let i2ij1:I2IJ = matchCL.i2ij1 in
+let jc:JobCollection = matchTL.jc in
+let mp:Microplate = matchTL.mp in
+let ij1:IncubateJob = matchTL.ij1 in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+i.assay->includes(assay) and 
+assay.steps->includes(i) and 
+i.i2ij.ij->size() > 0 and i.i2ij.ij->size() < Microplate.allInstances()->size() and 
+assay.name <> Undefined and 
+i.id <> Undefined and
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and 
+ij1.jc->includes(jc) and 
+jc.jobs->includes(ij1) and 
+I2MP.allInstances()->exists(e | e.i = ij1.i2ij.i and e.mp = mp) = false and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and 
+i2ij1.i->includes(i) and 
+i.i2ij->includes(i2ij1) and 
+ij1.i2ij->includes(i2ij1) and 
+i2ij1.ij->includes(ij1)
+
+post IncubateJob_New_2_forwTrafo_post:
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let i:Incubate = matchSR.i in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let i2ij1:I2IJ = matchCL.i2ij1 in
+let jc:JobCollection = matchTL.jc in
+let mp:Microplate = matchTL.mp in
+let ij1:IncubateJob = matchTL.ij1 in
+JobCollection.allInstances->includesAll(Set {jc})
+ and
+Microplate.allInstances->includesAll(Set {mp})
+ and
+IncubateJob.allInstances->includesAll(Set {ij1})
+ and
+(IncubateJob.allInstances - IncubateJob.allInstances@pre)->exists(ij2|
+ij2.jc->includes(jc) and
+jc.jobs->includes(ij2) and
+mp.jInI->includes(ij2) and
+ij2.tPlateI->includes(mp) and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+I2IJ.allInstances->includesAll(Set {i2ij1})
+ and
+(I2IJ.allInstances - I2IJ.allInstances@pre)->exists(i2ij2|
+(I2MP.allInstances - I2MP.allInstances@pre)->exists(i2mp|
+i2ij2.i->includes(i) and
+i.i2ij->includes(i2ij2) and
+i2ij2.ij->includes(ij2) and
+ij2.i2ij->includes(i2ij2) and
+i2mp.i->includes(i) and
+i.i2mp->includes(i2mp) and
+mp.i2mp->includes(i2mp) and
+i2mp.mp->includes(mp) and
+i2ij2.ij.protocolStepName = i2ij2.i.id and
+i2ij2.ij.temperature = i2ij2.i.temperature and
+i2ij2.ij.duration = i2ij2.i.duration)))
+
+context RuleCollection::WashJob_New_forwTrafo (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, w: Wash, i: Incubate),
+    matchCL: Tuple(jr2jc: JR2JC, i2ij: I2IJ),
+    matchTL: Tuple(jc: JobCollection, mp: Microplate, ij: IncubateJob))
+pre WashJob_New_forwTrafo_pre: 
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let w:Wash = matchSR.w in
+let i:Incubate = matchSR.i in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let i2ij:I2IJ = matchCL.i2ij in
+let jc:JobCollection = matchTL.jc in
+let mp:Microplate = matchTL.mp in
+let ij:IncubateJob = matchTL.ij in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+w.assay->includes(assay) and 
+assay.steps->includes(w) and 
+i.assay->includes(assay) and 
+assay.steps->includes(i) and 
+i.next->includes(w) and 
+w.previous->includes(i) and 
+S2MP.allInstances()->size() = Sample.allInstances()->size() and 
+w.w2wj.wj->size() < Microplate.allInstances()->size() and 
+assay.name <> Undefined and 
+w.id <> Undefined and 
+i.id <> Undefined and
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and 
+ij.jc->includes(jc) and 
+jc.jobs->includes(ij) and 
+mp.jInI->includes(ij) and 
+ij.tPlateI->includes(mp) and 
+ij.next->size() = 0 and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and 
+i2ij.i->includes(i) and 
+i.i2ij->includes(i2ij) and 
+i2ij.ij->includes(ij) and 
+ij.i2ij->includes(i2ij)
+
+post WashJob_New_forwTrafo_post:
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let w:Wash = matchSR.w in
+let i:Incubate = matchSR.i in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let i2ij:I2IJ = matchCL.i2ij in
+let jc:JobCollection = matchTL.jc in
+let mp:Microplate = matchTL.mp in
+let ij:IncubateJob = matchTL.ij in
+JobCollection.allInstances->includesAll(Set {jc})
+ and
+Microplate.allInstances->includesAll(Set {mp})
+ and
+IncubateJob.allInstances->includesAll(Set {ij})
+ and
+(WashJob.allInstances - WashJob.allInstances@pre)->exists(wj|
+jc.jobs->includes(wj) and
+wj.jc->includes(jc) and
+wj.tPlateW->includes(mp) and
+mp.jInW->includes(wj) and
+ij.next->includes(wj) and
+wj.previous->includes(ij) and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+I2IJ.allInstances->includesAll(Set {i2ij})
+ and
+(W2WJ.allInstances - W2WJ.allInstances@pre)->exists(w2wj|
+w2wj.w->includes(w) and
+w.w2wj->includes(w2wj) and
+wj.w2wj->includes(w2wj) and
+w2wj.wj->includes(wj) and
+w2wj.wj.protocolStepName = w2wj.w.id and
+not (w2wj.wj.cavities = Undefined)))
+
+context RuleCollection::AddReagent_New_forwTrafo (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, ar: AddReagent, r: Reagent, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC, s2mp: S2MP, r2t: R2T),
+    matchTL: Tuple(jc: JobCollection, mp: Microplate, t: Trough))
+pre AddReagent_New_forwTrafo_pre: 
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let ar:AddReagent = matchSR.ar in
+let r:Reagent = matchSR.r in
+let s:Sample = matchSR.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let s2mp:S2MP = matchCL.s2mp in
+let r2t:R2T = matchCL.r2t in
+let jc:JobCollection = matchTL.jc in
+let mp:Microplate = matchTL.mp in
+let t:Trough = matchTL.t in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+ar.assay->includes(assay) and 
+assay.steps->includes(ar) and 
+r.assay->includes(assay) and 
+assay.reagents->includes(r) and 
+ar.rType->includes(r) and 
+r.jAdd->includes(ar) and 
+ar.ar2ltj.ltj.tips->size() <> Sample.allInstances()->size() and 
+ar.ar2ltj.ltj.tips->size() + 1 = s.getId() and 
+ar.ar2ltj.ltj.tips->size().mod(8) = 0 and
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and 
+t.jc->includes(jc) and 
+jc.labware->includes(t) and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and 
+s2mp.s->includes(s) and 
+s.s2mp->includes(s2mp) and 
+mp.s2mp->includes(s2mp) and 
+s2mp.mp->includes(mp) and 
+r2t.r->includes(r) and 
+r.r2t->includes(r2t) and 
+r2t.t->includes(t) and 
+t.r2t->includes(r2t)
+
+post AddReagent_New_forwTrafo_post:
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let ar:AddReagent = matchSR.ar in
+let r:Reagent = matchSR.r in
+let s:Sample = matchSR.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let s2mp:S2MP = matchCL.s2mp in
+let r2t:R2T = matchCL.r2t in
+let jc:JobCollection = matchTL.jc in
+let mp:Microplate = matchTL.mp in
+let t:Trough = matchTL.t in
+JobCollection.allInstances->includesAll(Set {jc})
+ and
+Microplate.allInstances->includesAll(Set {mp})
+ and
+Trough.allInstances->includesAll(Set {t})
+ and
+(LiquidTransferJob.allInstances - LiquidTransferJob.allInstances@pre)->exists(ltj|
+(TipLiquidTransfer.allInstances - TipLiquidTransfer.allInstances@pre)->exists(tlt|
+jc.jobs->includes(ltj) and
+ltj.jc->includes(jc) and
+t.sJob->includes(ltj) and
+ltj.source->includes(t) and
+ltj.target->includes(mp) and
+mp.tJob->includes(ltj) and
+ltj.tips->includes(tlt) and
+tlt.pJob->includes(ltj) and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+S2MP.allInstances->includesAll(Set {s2mp})
+ and
+R2T.allInstances->includesAll(Set {r2t})
+ and
+(AR2TLT.allInstances - AR2TLT.allInstances@pre)->exists(ar2tlt|
+(AR2LTJ.allInstances - AR2LTJ.allInstances@pre)->exists(ar2ltj|
+ar2tlt.s->includes(s) and
+s.ar2tlt->includes(ar2tlt) and
+tlt.ar2tlt->includes(ar2tlt) and
+ar2tlt.tlt->includes(tlt) and
+ar2ltj.ar->includes(ar) and
+ar.ar2ltj->includes(ar2ltj) and
+ltj.ar2ltj->includes(ar2ltj) and
+ar2ltj.ltj->includes(ltj) and
+true = true and
+true = true and
+true = true))))
+
+context RuleCollection::AddReagent_Exist_forwTrafo (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, ar: AddReagent, r: Reagent, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC, s2mp: S2MP, r2t: R2T, ar2ltj: AR2LTJ),
+    matchTL: Tuple(jc: JobCollection, mp: Microplate, t: Trough, ltj: LiquidTransferJob))
+pre AddReagent_Exist_forwTrafo_pre: 
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let ar:AddReagent = matchSR.ar in
+let r:Reagent = matchSR.r in
+let s:Sample = matchSR.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let s2mp:S2MP = matchCL.s2mp in
+let r2t:R2T = matchCL.r2t in
+let ar2ltj:AR2LTJ = matchCL.ar2ltj in
+let jc:JobCollection = matchTL.jc in
+let mp:Microplate = matchTL.mp in
+let t:Trough = matchTL.t in
+let ltj:LiquidTransferJob = matchTL.ltj in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+ar.assay->includes(assay) and 
+assay.steps->includes(ar) and 
+r.assay->includes(assay) and 
+assay.reagents->includes(r) and 
+ar.rType->includes(r) and 
+r.jAdd->includes(ar) and 
+ar.ar2ltj.ltj.tips->size() <> Sample.allInstances()->size() and 
+ar.ar2ltj.ltj.tips->size() + 1 = s.getId() and 
+ar.ar2ltj.ltj.tips->size().mod(8) <> 0 and
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and 
+t.jc->includes(jc) and 
+jc.labware->includes(t) and 
+jc.jobs->includes(ltj) and 
+ltj.jc->includes(jc) and 
+t.sJob->includes(ltj) and 
+ltj.source->includes(t) and 
+ltj.target->includes(mp) and 
+mp.tJob->includes(ltj) and 
+ltj.tips->size() < 8 and
+ltj.tips->size() < 8 and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and 
+s2mp.s->includes(s) and 
+s.s2mp->includes(s2mp) and 
+mp.s2mp->includes(s2mp) and 
+s2mp.mp->includes(mp) and 
+r2t.r->includes(r) and 
+r.r2t->includes(r2t) and 
+r2t.t->includes(t) and 
+t.r2t->includes(r2t) and 
+ar2ltj.ar->includes(ar) and 
+ar.ar2ltj->includes(ar2ltj) and 
+ltj.ar2ltj->includes(ar2ltj) and 
+ar2ltj.ltj->includes(ltj)
+
+post AddReagent_Exist_forwTrafo_post:
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let ar:AddReagent = matchSR.ar in
+let r:Reagent = matchSR.r in
+let s:Sample = matchSR.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let s2mp:S2MP = matchCL.s2mp in
+let r2t:R2T = matchCL.r2t in
+let ar2ltj:AR2LTJ = matchCL.ar2ltj in
+let jc:JobCollection = matchTL.jc in
+let mp:Microplate = matchTL.mp in
+let t:Trough = matchTL.t in
+let ltj:LiquidTransferJob = matchTL.ltj in
+JobCollection.allInstances->includesAll(Set {jc})
+ and
+Microplate.allInstances->includesAll(Set {mp})
+ and
+Trough.allInstances->includesAll(Set {t})
+ and
+LiquidTransferJob.allInstances->includesAll(Set {ltj})
+ and
+(TipLiquidTransfer.allInstances - TipLiquidTransfer.allInstances@pre)->exists(tlt|
+ltj.tips->includes(tlt) and
+tlt.pJob->includes(ltj) and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+S2MP.allInstances->includesAll(Set {s2mp})
+ and
+R2T.allInstances->includesAll(Set {r2t})
+ and
+AR2LTJ.allInstances->includesAll(Set {ar2ltj})
+ and
+(AR2TLT.allInstances - AR2TLT.allInstances@pre)->exists(ar2tlt|
+ar2tlt.s->includes(s) and
+s.ar2tlt->includes(ar2tlt) and
+tlt.ar2tlt->includes(ar2tlt) and
+ar2tlt.tlt->includes(tlt) and
+true = true and
+true = true))
+
+context RuleCollection::Distribute_IncubateJob_forwTrafo (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, ds: DistributeSample, i: Incubate),
+    matchCL: Tuple(jr2jc: JR2JC, ds2ltj: DS2LTJ, i2ij: I2IJ),
+    matchTL: Tuple(jc: JobCollection, mp: Microplate, ltj: LiquidTransferJob, ij: IncubateJob))
+pre Distribute_IncubateJob_forwTrafo_pre: 
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let ds:DistributeSample = matchSR.ds in
+let i:Incubate = matchSR.i in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let ds2ltj:DS2LTJ = matchCL.ds2ltj in
+let i2ij:I2IJ = matchCL.i2ij in
+let jc:JobCollection = matchTL.jc in
+let mp:Microplate = matchTL.mp in
+let ltj:LiquidTransferJob = matchTL.ltj in
+let ij:IncubateJob = matchTL.ij in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+ds.assay->includes(assay) and 
+assay.steps->includes(ds) and 
+i.assay->includes(assay) and 
+assay.steps->includes(i) and 
+ds.next->includes(i) and 
+i.previous->includes(ds) and 
+ds.ds2ltj.ltj.next->size() <> ds.ds2ltj.ltj->size() and 
+assay.name <> Undefined and 
+ds.id <> Undefined and 
+i.id <> Undefined and
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and 
+jc.jobs->includes(ltj) and 
+ltj.jc->includes(jc) and 
+ij.jc->includes(jc) and 
+jc.jobs->includes(ij) and 
+ltj.target->includes(mp) and 
+mp.tJob->includes(ltj) and 
+mp.jInI->includes(ij) and 
+ij.tPlateI->includes(mp) and 
+ltj.next->size() = 0 and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and 
+ds.ds2ltj->includes(ds2ltj) and 
+ds2ltj.ds->includes(ds) and 
+ds2ltj.ltj->includes(ltj) and 
+ltj.ds2ltj->includes(ds2ltj) and 
+i2ij.i->includes(i) and 
+i.i2ij->includes(i2ij) and 
+i2ij.ij->includes(ij) and 
+ij.i2ij->includes(i2ij)
+
+post Distribute_IncubateJob_forwTrafo_post:
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let ds:DistributeSample = matchSR.ds in
+let i:Incubate = matchSR.i in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let ds2ltj:DS2LTJ = matchCL.ds2ltj in
+let i2ij:I2IJ = matchCL.i2ij in
+let jc:JobCollection = matchTL.jc in
+let mp:Microplate = matchTL.mp in
+let ltj:LiquidTransferJob = matchTL.ltj in
+let ij:IncubateJob = matchTL.ij in
+JobCollection.allInstances->includesAll(Set {jc})
+ and
+Microplate.allInstances->includesAll(Set {mp})
+ and
+LiquidTransferJob.allInstances->includesAll(Set {ltj})
+ and
+IncubateJob.allInstances->includesAll(Set {ij})
+ and
+ij.previous->includes(ltj) and
+ltj.next->includes(ij) and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+DS2LTJ.allInstances->includesAll(Set {ds2ltj})
+ and
+I2IJ.allInstances->includesAll(Set {i2ij})
+
+
+context RuleCollection::AddReagent_IncubateJob_forwTrafo (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, i: Incubate, ar: AddReagent),
+    matchCL: Tuple(jr2jc: JR2JC, ar2ltj: AR2LTJ, i2ij: I2IJ),
+    matchTL: Tuple(jc: JobCollection, mp: Microplate, ltj: LiquidTransferJob, ij: IncubateJob))
+pre AddReagent_IncubateJob_forwTrafo_pre: 
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let i:Incubate = matchSR.i in
+let ar:AddReagent = matchSR.ar in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let ar2ltj:AR2LTJ = matchCL.ar2ltj in
+let i2ij:I2IJ = matchCL.i2ij in
+let jc:JobCollection = matchTL.jc in
+let mp:Microplate = matchTL.mp in
+let ltj:LiquidTransferJob = matchTL.ltj in
+let ij:IncubateJob = matchTL.ij in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+i.assay->includes(assay) and 
+assay.steps->includes(i) and 
+ar.assay->includes(assay) and 
+assay.steps->includes(ar) and 
+ar.next->includes(i) and 
+i.previous->includes(ar) and 
+ar.ar2ltj.ltj.next->size() <> ar.ar2ltj.ltj->size() and 
+assay.name <> Undefined and 
+i.id <> Undefined and 
+ar.id <> Undefined and
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and 
+jc.jobs->includes(ltj) and 
+ltj.jc->includes(jc) and 
+ij.jc->includes(jc) and 
+jc.jobs->includes(ij) and 
+ltj.target->includes(mp) and 
+mp.tJob->includes(ltj) and 
+mp.jInI->includes(ij) and 
+ij.tPlateI->includes(mp) and 
+ltj.next->size() = 0 and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and 
+ar2ltj.ar->includes(ar) and 
+ar.ar2ltj->includes(ar2ltj) and 
+ltj.ar2ltj->includes(ar2ltj) and 
+ar2ltj.ltj->includes(ltj) and 
+i2ij.i->includes(i) and 
+i.i2ij->includes(i2ij) and 
+i2ij.ij->includes(ij) and 
+ij.i2ij->includes(i2ij)
+
+post AddReagent_IncubateJob_forwTrafo_post:
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let i:Incubate = matchSR.i in
+let ar:AddReagent = matchSR.ar in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let ar2ltj:AR2LTJ = matchCL.ar2ltj in
+let i2ij:I2IJ = matchCL.i2ij in
+let jc:JobCollection = matchTL.jc in
+let mp:Microplate = matchTL.mp in
+let ltj:LiquidTransferJob = matchTL.ltj in
+let ij:IncubateJob = matchTL.ij in
+JobCollection.allInstances->includesAll(Set {jc})
+ and
+Microplate.allInstances->includesAll(Set {mp})
+ and
+LiquidTransferJob.allInstances->includesAll(Set {ltj})
+ and
+IncubateJob.allInstances->includesAll(Set {ij})
+ and
+ij.previous->includes(ltj) and
+ltj.next->includes(ij) and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+AR2LTJ.allInstances->includesAll(Set {ar2ltj})
+ and
+I2IJ.allInstances->includesAll(Set {i2ij})
+
+
+context RuleCollection::WashJob_AddReagent_forwTrafo (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, w: Wash, ar: AddReagent),
+    matchCL: Tuple(jr2jc: JR2JC, ar2ltj: AR2LTJ, w2wj: W2WJ),
+    matchTL: Tuple(jc: JobCollection, mp: Microplate, ltj: LiquidTransferJob, wj: WashJob))
+pre WashJob_AddReagent_forwTrafo_pre: 
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let w:Wash = matchSR.w in
+let ar:AddReagent = matchSR.ar in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let ar2ltj:AR2LTJ = matchCL.ar2ltj in
+let w2wj:W2WJ = matchCL.w2wj in
+let jc:JobCollection = matchTL.jc in
+let mp:Microplate = matchTL.mp in
+let ltj:LiquidTransferJob = matchTL.ltj in
+let wj:WashJob = matchTL.wj in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+w.assay->includes(assay) and 
+assay.steps->includes(w) and 
+ar.assay->includes(assay) and 
+assay.steps->includes(ar) and 
+ar.previous->includes(w) and 
+w.next->includes(ar) and 
+w.w2wj.wj.next->size() <> ar.ar2ltj.ltj->size() and 
+assay.name <> Undefined and 
+w.id <> Undefined and 
+ar.id <> Undefined and
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and 
+jc.jobs->includes(ltj) and 
+ltj.jc->includes(jc) and 
+jc.jobs->includes(wj) and 
+wj.jc->includes(jc) and 
+ltj.target->includes(mp) and 
+mp.tJob->includes(ltj) and 
+wj.tPlateW->includes(mp) and 
+mp.jInW->includes(wj) and 
+ltj.previous->size() = 0 and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and 
+ar2ltj.ar->includes(ar) and 
+ar.ar2ltj->includes(ar2ltj) and 
+ltj.ar2ltj->includes(ar2ltj) and 
+ar2ltj.ltj->includes(ltj) and 
+w2wj.w->includes(w) and 
+w.w2wj->includes(w2wj) and 
+wj.w2wj->includes(w2wj) and 
+w2wj.wj->includes(wj)
+
+post WashJob_AddReagent_forwTrafo_post:
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let w:Wash = matchSR.w in
+let ar:AddReagent = matchSR.ar in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let ar2ltj:AR2LTJ = matchCL.ar2ltj in
+let w2wj:W2WJ = matchCL.w2wj in
+let jc:JobCollection = matchTL.jc in
+let mp:Microplate = matchTL.mp in
+let ltj:LiquidTransferJob = matchTL.ltj in
+let wj:WashJob = matchTL.wj in
+JobCollection.allInstances->includesAll(Set {jc})
+ and
+Microplate.allInstances->includesAll(Set {mp})
+ and
+LiquidTransferJob.allInstances->includesAll(Set {ltj})
+ and
+WashJob.allInstances->includesAll(Set {wj})
+ and
+ltj.previous->includes(wj) and
+wj.next->includes(ltj) and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+AR2LTJ.allInstances->includesAll(Set {ar2ltj})
+ and
+W2WJ.allInstances->includesAll(Set {w2wj})
+
+
+context RuleCollection::Incubate_Distribute_forwTrafo (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, i: Incubate, ds: DistributeSample),
+    matchCL: Tuple(jr2jc: JR2JC, ds2ltj: DS2LTJ, i2ij: I2IJ),
+    matchTL: Tuple(jc: JobCollection, mp: Microplate, ltj: LiquidTransferJob, ij: IncubateJob))
+pre Incubate_Distribute_forwTrafo_pre: 
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let i:Incubate = matchSR.i in
+let ds:DistributeSample = matchSR.ds in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let ds2ltj:DS2LTJ = matchCL.ds2ltj in
+let i2ij:I2IJ = matchCL.i2ij in
+let jc:JobCollection = matchTL.jc in
+let mp:Microplate = matchTL.mp in
+let ltj:LiquidTransferJob = matchTL.ltj in
+let ij:IncubateJob = matchTL.ij in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+i.assay->includes(assay) and 
+assay.steps->includes(i) and 
+ds.assay->includes(assay) and 
+assay.steps->includes(ds) and 
+ds.previous->includes(i) and 
+i.next->includes(ds) and 
+i.i2ij.ij.next->size() <> ds.ds2ltj.ltj->size() and 
+assay.name <> Undefined and 
+i.id <> Undefined and 
+ds.id <> Undefined and
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and 
+jc.jobs->includes(ltj) and 
+ltj.jc->includes(jc) and 
+ij.jc->includes(jc) and 
+jc.jobs->includes(ij) and 
+ltj.target->includes(mp) and 
+mp.tJob->includes(ltj) and 
+mp.jInI->includes(ij) and 
+ij.tPlateI->includes(mp) and 
+ltj.previous->size() = 0 and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and 
+ds.ds2ltj->includes(ds2ltj) and 
+ds2ltj.ds->includes(ds) and 
+ds2ltj.ltj->includes(ltj) and 
+ltj.ds2ltj->includes(ds2ltj) and 
+i2ij.i->includes(i) and 
+i.i2ij->includes(i2ij) and 
+i2ij.ij->includes(ij) and 
+ij.i2ij->includes(i2ij)
+
+post Incubate_Distribute_forwTrafo_post:
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let i:Incubate = matchSR.i in
+let ds:DistributeSample = matchSR.ds in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let ds2ltj:DS2LTJ = matchCL.ds2ltj in
+let i2ij:I2IJ = matchCL.i2ij in
+let jc:JobCollection = matchTL.jc in
+let mp:Microplate = matchTL.mp in
+let ltj:LiquidTransferJob = matchTL.ltj in
+let ij:IncubateJob = matchTL.ij in
+JobCollection.allInstances->includesAll(Set {jc})
+ and
+Microplate.allInstances->includesAll(Set {mp})
+ and
+LiquidTransferJob.allInstances->includesAll(Set {ltj})
+ and
+IncubateJob.allInstances->includesAll(Set {ij})
+ and
+ltj.previous->includes(ij) and
+ij.next->includes(ltj) and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+DS2LTJ.allInstances->includesAll(Set {ds2ltj})
+ and
+I2IJ.allInstances->includesAll(Set {i2ij})
+
+
+context RuleCollection::JobReq2JobCol_backTrafo (
+    matchTR: Tuple(jc: JobCollection))
+pre JobReq2JobCol_backTrafo_pre: 
+let jc:JobCollection = matchTR.jc in
+jc.jr2jc->size() = 0
+
+post JobReq2JobCol_backTrafo_post:
+let jc:JobCollection = matchTR.jc in
+(JobRequest.allInstances - JobRequest.allInstances@pre)->exists(jr|
+(JR2JC.allInstances - JR2JC.allInstances@pre)->exists(jr2jc|
+jr.jr2jc->includes(jr2jc) and
+jr2jc.jr->includes(jr) and
+jc.jr2jc->includes(jr2jc) and
+jr2jc.jc->includes(jc)))
+
+context RuleCollection::reagent2trough_backTrafo (
+    matchSL: Tuple(jr: JobRequest, assay: Assay),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTR: Tuple(jc: JobCollection, t: Trough))
+pre reagent2trough_backTrafo_pre: 
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTR.jc in
+let t:Trough = matchTR.t in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+assay.name <> Undefined and
+t.jc->includes(jc) and 
+jc.labware->includes(t) and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and
+t.r2t->size() = 0
+
+post reagent2trough_backTrafo_post:
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTR.jc in
+let t:Trough = matchTR.t in
+JobRequest.allInstances->includesAll(Set {jr})
+ and
+Assay.allInstances->includesAll(Set {assay})
+ and
+(Reagent.allInstances - Reagent.allInstances@pre)->exists(r|
+r.assay->includes(assay) and
+assay.reagents->includes(r) and
+r.name <> Undefined and
+r.r2t = Undefined and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+(R2T.allInstances - R2T.allInstances@pre)->exists(r2t|
+r2t.r->includes(r) and
+r.r2t->includes(r2t) and
+r2t.t->includes(t) and
+t.r2t->includes(r2t) and
+r2t.r.name = r2t.t.name))
+
+context RuleCollection::Sample2NewTubeRunner_backTrafo (
+    matchSL: Tuple(jr: JobRequest, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTR: Tuple(jc: JobCollection, tr: TubeRunner))
+pre Sample2NewTubeRunner_backTrafo_pre: 
+let jr:JobRequest = matchSL.jr in
+let s:Sample = matchSL.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTR.jc in
+let tr:TubeRunner = matchTR.tr in
+jr.samples->includes(s) and 
+s.jr->includes(jr) and 
+S2TR.allInstances()->size() <> Sample.allInstances()->size() and 
+s.s2tr = Undefined and 
+s.sampleID <> Undefined and 
+s.state = SampleState::Waiting and 
+S2TR.allInstances()->size() + 1 = s.getId() and 
+S2TR.allInstances()->size().mod(16) = 0 and
+tr.jc->includes(jc) and 
+jc.labware->includes(tr) and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc)
+
+post Sample2NewTubeRunner_backTrafo_post:
+let jr:JobRequest = matchSL.jr in
+let s:Sample = matchSL.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTR.jc in
+let tr:TubeRunner = matchTR.tr in
+JobRequest.allInstances->includesAll(Set {jr})
+ and
+Sample.allInstances->includesAll(Set {s})
+ and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+(S2TR.allInstances - S2TR.allInstances@pre)->exists(s2tr|
+s.s2tr->includes(s2tr) and
+s2tr.s->includes(s) and
+s2tr.tr->includes(tr) and
+tr.s2tr->includes(s2tr) and
+s2tr.tr.barcodes.split(' ')->count(s2tr.s.sampleID) = 1)
+
+context RuleCollection::Sample2ExistTubeRunner_backTrafo (
+    matchSL: Tuple(jr: JobRequest, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTR: Tuple(jc: JobCollection, tr: TubeRunner))
+pre Sample2ExistTubeRunner_backTrafo_pre: 
+let jr:JobRequest = matchSL.jr in
+let s:Sample = matchSL.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTR.jc in
+let tr:TubeRunner = matchTR.tr in
+jr.samples->includes(s) and 
+s.jr->includes(jr) and 
+S2TR.allInstances()->size() <> Sample.allInstances()->size() and 
+s.s2tr = Undefined and 
+s.sampleID <> Undefined and 
+s.state = SampleState::Waiting and 
+S2TR.allInstances()->size() + 1 = s.getId() and
+tr.jc->includes(jc) and 
+jc.labware->includes(tr) and 
+tr.barcodes.split(' ')->size() < 16 and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc)
+
+post Sample2ExistTubeRunner_backTrafo_post:
+let jr:JobRequest = matchSL.jr in
+let s:Sample = matchSL.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTR.jc in
+let tr:TubeRunner = matchTR.tr in
+JobRequest.allInstances->includesAll(Set {jr})
+ and
+Sample.allInstances->includesAll(Set {s})
+ and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+(S2TR.allInstances - S2TR.allInstances@pre)->exists(s2tr|
+s.s2tr->includes(s2tr) and
+s2tr.s->includes(s) and
+s2tr.tr->includes(tr) and
+tr.s2tr->includes(s2tr) and
+s2tr.tr.barcodes.split(' ')->count(s2tr.s.sampleID) = 1)
+
+context RuleCollection::InitNewMicroplate_backTrafo (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTR: Tuple(jc: JobCollection, mp: Microplate))
+pre InitNewMicroplate_backTrafo_pre: 
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let s:Sample = matchSL.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTR.jc in
+let mp:Microplate = matchTR.mp in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+jr.samples->includes(s) and 
+s.jr->includes(jr) and 
+S2MP.allInstances()->size() <> Sample.allInstances()->size() and 
+assay.name <> Undefined and 
+s.sampleID <> Undefined and 
+s.s2mp = Undefined and 
+S2MP.allInstances()->size() + 1 = s.getId() and 
+S2MP.allInstances()->size().mod(96) = 0 and
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc)
+
+post InitNewMicroplate_backTrafo_post:
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let s:Sample = matchSL.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTR.jc in
+let mp:Microplate = matchTR.mp in
+JobRequest.allInstances->includesAll(Set {jr})
+ and
+Assay.allInstances->includesAll(Set {assay})
+ and
+Sample.allInstances->includesAll(Set {s})
+ and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+(S2MP.allInstances - S2MP.allInstances@pre)->exists(s2mp|
+s2mp.s->includes(s) and
+s.s2mp->includes(s2mp) and
+mp.s2mp->includes(s2mp) and
+s2mp.mp->includes(mp) and
+not (s2mp.mp.name = Undefined))
+
+context RuleCollection::SampleAssignExistMicroplate_backTrafo (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTR: Tuple(jc: JobCollection, mp: Microplate))
+pre SampleAssignExistMicroplate_backTrafo_pre: 
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let s:Sample = matchSL.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTR.jc in
+let mp:Microplate = matchTR.mp in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+jr.samples->includes(s) and 
+s.jr->includes(jr) and 
+S2MP.allInstances()->size() <> Sample.allInstances()->size() and 
+S2MP.allInstances()->size() + 1 = s.getId() and 
+assay.name <> Undefined and 
+s.sampleID <> Undefined and 
+s.s2mp = Undefined and
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and 
+mp.s2mp->size() < 96 and 
+mp.name <> '' and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc)
+
+post SampleAssignExistMicroplate_backTrafo_post:
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let s:Sample = matchSL.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTR.jc in
+let mp:Microplate = matchTR.mp in
+JobRequest.allInstances->includesAll(Set {jr})
+ and
+Assay.allInstances->includesAll(Set {assay})
+ and
+Sample.allInstances->includesAll(Set {s})
+ and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+(S2MP.allInstances - S2MP.allInstances@pre)->exists(s2mp|
+s2mp.s->includes(s) and
+s.s2mp->includes(s2mp) and
+mp.s2mp->includes(s2mp) and
+s2mp.mp->includes(mp))
+
+context RuleCollection::DistributeSample_New_backTrafo (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, ds: DistributeSample, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC, s2tr: S2TR, s2mp: S2MP),
+    matchTR: Tuple(jc: JobCollection, tr: TubeRunner, mp: Microplate, ltj: LiquidTransferJob, tlt: TipLiquidTransfer))
+pre DistributeSample_New_backTrafo_pre: 
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let ds:DistributeSample = matchSL.ds in
+let s:Sample = matchSL.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let s2tr:S2TR = matchCL.s2tr in
+let s2mp:S2MP = matchCL.s2mp in
+let jc:JobCollection = matchTR.jc in
+let tr:TubeRunner = matchTR.tr in
+let mp:Microplate = matchTR.mp in
+let ltj:LiquidTransferJob = matchTR.ltj in
+let tlt:TipLiquidTransfer = matchTR.tlt in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+ds.assay->includes(assay) and 
+assay.steps->includes(ds) and 
+jr.samples->includes(s) and 
+s.jr->includes(jr) and 
+ds.ds2ltj.ltj.tips->size() <> Sample.allInstances()->size() and 
+ds.ds2ltj.ltj.tips->size() + 1 = s.getId() and 
+ds.ds2ltj.ltj.tips->size().mod(8) = 0 and
+tr.jc->includes(jc) and 
+jc.labware->includes(tr) and 
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and
+jc.jobs->includes(ltj) and 
+ltj.jc->includes(jc) and 
+tr.sJob->includes(ltj) and 
+ltj.source->includes(tr) and 
+ltj.target->includes(mp) and 
+mp.tJob->includes(ltj) and 
+ltj.tips->includes(tlt) and 
+tlt.pJob->includes(ltj) and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and 
+s.s2tr->includes(s2tr) and 
+s2tr.s->includes(s) and 
+s2tr.tr->includes(tr) and 
+tr.s2tr->includes(s2tr) and 
+s2mp.s->includes(s) and 
+s.s2mp->includes(s2mp) and 
+mp.s2mp->includes(s2mp) and 
+s2mp.mp->includes(mp) and
+tlt.s2tlt->size() = 0 and
+ltj.ds2ltj->size() = 0
+
+post DistributeSample_New_backTrafo_post:
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let ds:DistributeSample = matchSL.ds in
+let s:Sample = matchSL.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let s2tr:S2TR = matchCL.s2tr in
+let s2mp:S2MP = matchCL.s2mp in
+let jc:JobCollection = matchTR.jc in
+let tr:TubeRunner = matchTR.tr in
+let mp:Microplate = matchTR.mp in
+let ltj:LiquidTransferJob = matchTR.ltj in
+let tlt:TipLiquidTransfer = matchTR.tlt in
+JobRequest.allInstances->includesAll(Set {jr})
+ and
+Assay.allInstances->includesAll(Set {assay})
+ and
+DistributeSample.allInstances->includesAll(Set {ds})
+ and
+Sample.allInstances->includesAll(Set {s})
+ and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+S2TR.allInstances->includesAll(Set {s2tr})
+ and
+S2MP.allInstances->includesAll(Set {s2mp})
+ and
+(S2TLT.allInstances - S2TLT.allInstances@pre)->exists(s2tlt|
+(DS2LTJ.allInstances - DS2LTJ.allInstances@pre)->exists(ds2ltj|
+s.s2tlt->includes(s2tlt) and
+s2tlt.s->includes(s) and
+s2tlt.tlt->includes(tlt) and
+tlt.s2tlt->includes(s2tlt) and
+ds.ds2ltj->includes(ds2ltj) and
+ds2ltj.ds->includes(ds) and
+ds2ltj.ltj->includes(ltj) and
+ltj.ds2ltj->includes(ds2ltj) and
+true = true and
+true = true and
+true = true and
+true = true))
+
+context RuleCollection::DistributeSample_Exist_backTrafo (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, ds: DistributeSample, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC, s2tr: S2TR, s2mp: S2MP, ds2ltj: DS2LTJ),
+    matchTR: Tuple(jc: JobCollection, tr: TubeRunner, mp: Microplate, ltj: LiquidTransferJob, tlt: TipLiquidTransfer))
+pre DistributeSample_Exist_backTrafo_pre: 
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let ds:DistributeSample = matchSL.ds in
+let s:Sample = matchSL.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let s2tr:S2TR = matchCL.s2tr in
+let s2mp:S2MP = matchCL.s2mp in
+let ds2ltj:DS2LTJ = matchCL.ds2ltj in
+let jc:JobCollection = matchTR.jc in
+let tr:TubeRunner = matchTR.tr in
+let mp:Microplate = matchTR.mp in
+let ltj:LiquidTransferJob = matchTR.ltj in
+let tlt:TipLiquidTransfer = matchTR.tlt in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+ds.assay->includes(assay) and 
+assay.steps->includes(ds) and 
+jr.samples->includes(s) and 
+s.jr->includes(jr) and 
+ds.ds2ltj.ltj.tips->size() <> Sample.allInstances()->size() and 
+ds.ds2ltj.ltj.tips->size() + 1 = s.getId() and 
+ds.ds2ltj.ltj.tips->size().mod(8) <> 0 and
+tr.jc->includes(jc) and 
+jc.labware->includes(tr) and 
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and 
+jc.jobs->includes(ltj) and 
+ltj.jc->includes(jc) and 
+tr.sJob->includes(ltj) and 
+ltj.source->includes(tr) and 
+ltj.target->includes(mp) and 
+mp.tJob->includes(ltj) and 
+ltj.tips->size() < 8 and
+ltj.tips->includes(tlt) and 
+tlt.pJob->includes(ltj) and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and 
+s.s2tr->includes(s2tr) and 
+s2tr.s->includes(s) and 
+s2tr.tr->includes(tr) and 
+tr.s2tr->includes(s2tr) and 
+s2mp.s->includes(s) and 
+s.s2mp->includes(s2mp) and 
+mp.s2mp->includes(s2mp) and 
+s2mp.mp->includes(mp) and 
+ds.ds2ltj->includes(ds2ltj) and 
+ds2ltj.ds->includes(ds) and 
+ds2ltj.ltj->includes(ltj) and 
+ltj.ds2ltj->includes(ds2ltj) and
+tlt.s2tlt->size() = 0
+
+post DistributeSample_Exist_backTrafo_post:
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let ds:DistributeSample = matchSL.ds in
+let s:Sample = matchSL.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let s2tr:S2TR = matchCL.s2tr in
+let s2mp:S2MP = matchCL.s2mp in
+let ds2ltj:DS2LTJ = matchCL.ds2ltj in
+let jc:JobCollection = matchTR.jc in
+let tr:TubeRunner = matchTR.tr in
+let mp:Microplate = matchTR.mp in
+let ltj:LiquidTransferJob = matchTR.ltj in
+let tlt:TipLiquidTransfer = matchTR.tlt in
+JobRequest.allInstances->includesAll(Set {jr})
+ and
+Assay.allInstances->includesAll(Set {assay})
+ and
+DistributeSample.allInstances->includesAll(Set {ds})
+ and
+Sample.allInstances->includesAll(Set {s})
+ and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+S2TR.allInstances->includesAll(Set {s2tr})
+ and
+S2MP.allInstances->includesAll(Set {s2mp})
+ and
+DS2LTJ.allInstances->includesAll(Set {ds2ltj})
+ and
+(S2TLT.allInstances - S2TLT.allInstances@pre)->exists(s2tlt|
+s.s2tlt->includes(s2tlt) and
+s2tlt.s->includes(s) and
+s2tlt.tlt->includes(tlt) and
+tlt.s2tlt->includes(s2tlt) and
+true = true and
+true = true and
+true = true)
+
+context RuleCollection::IncubateJob_New_1_backTrafo (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, i: Incubate),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTR: Tuple(jc: JobCollection, mp: Microplate, ij: IncubateJob))
+pre IncubateJob_New_1_backTrafo_pre: 
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let i:Incubate = matchSL.i in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTR.jc in
+let mp:Microplate = matchTR.mp in
+let ij:IncubateJob = matchTR.ij in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+i.assay->includes(assay) and 
+assay.steps->includes(i) and 
+i.i2ij.ij->size() = 0 and 
+assay.name <> Undefined and 
+i.id <> Undefined and
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and
+ij.jc->includes(jc) and 
+jc.jobs->includes(ij) and 
+mp.jInI->includes(ij) and 
+ij.tPlateI->includes(mp) and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and
+ij.i2ij->size() = 0
+
+post IncubateJob_New_1_backTrafo_post:
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let i:Incubate = matchSL.i in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTR.jc in
+let mp:Microplate = matchTR.mp in
+let ij:IncubateJob = matchTR.ij in
+JobRequest.allInstances->includesAll(Set {jr})
+ and
+Assay.allInstances->includesAll(Set {assay})
+ and
+Incubate.allInstances->includesAll(Set {i})
+ and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+(I2IJ.allInstances - I2IJ.allInstances@pre)->exists(i2ij|
+(I2MP.allInstances - I2MP.allInstances@pre)->exists(i2mp|
+i2ij.i->includes(i) and
+i.i2ij->includes(i2ij) and
+i2ij.ij->includes(ij) and
+ij.i2ij->includes(i2ij) and
+i2mp.i->includes(i) and
+i.i2mp->includes(i2mp) and
+mp.i2mp->includes(i2mp) and
+i2mp.mp->includes(mp) and
+i2ij.ij.protocolStepName = i2ij.i.id and
+i2ij.ij.temperature = i2ij.i.temperature and
+i2ij.ij.duration = i2ij.i.duration))
+
+context RuleCollection::IncubateJob_New_2_backTrafo (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, i: Incubate),
+    matchCL: Tuple(jr2jc: JR2JC, i2ij1: I2IJ),
+    matchTR: Tuple(jc: JobCollection, mp: Microplate, ij1: IncubateJob, ij2: IncubateJob))
+pre IncubateJob_New_2_backTrafo_pre: 
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let i:Incubate = matchSL.i in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let i2ij1:I2IJ = matchCL.i2ij1 in
+let jc:JobCollection = matchTR.jc in
+let mp:Microplate = matchTR.mp in
+let ij1:IncubateJob = matchTR.ij1 in
+let ij2:IncubateJob = matchTR.ij2 in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+i.assay->includes(assay) and 
+assay.steps->includes(i) and 
+i.i2ij.ij->size() > 0 and i.i2ij.ij->size() < Microplate.allInstances()->size() and 
+assay.name <> Undefined and 
+i.id <> Undefined and
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and 
+ij1.jc->includes(jc) and 
+jc.jobs->includes(ij1) and 
+I2MP.allInstances()->exists(e | e.i = ij1.i2ij.i and e.mp = mp) = false and
+ij2.jc->includes(jc) and 
+jc.jobs->includes(ij2) and 
+mp.jInI->includes(ij2) and 
+ij2.tPlateI->includes(mp) and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and 
+i2ij1.i->includes(i) and 
+i.i2ij->includes(i2ij1) and 
+ij1.i2ij->includes(i2ij1) and 
+i2ij1.ij->includes(ij1) and
+ij2.i2ij->size() = 0
+
+post IncubateJob_New_2_backTrafo_post:
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let i:Incubate = matchSL.i in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let i2ij1:I2IJ = matchCL.i2ij1 in
+let jc:JobCollection = matchTR.jc in
+let mp:Microplate = matchTR.mp in
+let ij1:IncubateJob = matchTR.ij1 in
+let ij2:IncubateJob = matchTR.ij2 in
+JobRequest.allInstances->includesAll(Set {jr})
+ and
+Assay.allInstances->includesAll(Set {assay})
+ and
+Incubate.allInstances->includesAll(Set {i})
+ and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+I2IJ.allInstances->includesAll(Set {i2ij1})
+ and
+(I2IJ.allInstances - I2IJ.allInstances@pre)->exists(i2ij2|
+(I2MP.allInstances - I2MP.allInstances@pre)->exists(i2mp|
+i2ij2.i->includes(i) and
+i.i2ij->includes(i2ij2) and
+i2ij2.ij->includes(ij2) and
+ij2.i2ij->includes(i2ij2) and
+i2mp.i->includes(i) and
+i.i2mp->includes(i2mp) and
+mp.i2mp->includes(i2mp) and
+i2mp.mp->includes(mp) and
+i2ij2.ij.protocolStepName = i2ij2.i.id and
+i2ij2.ij.temperature = i2ij2.i.temperature and
+i2ij2.ij.duration = i2ij2.i.duration))
+
+context RuleCollection::WashJob_New_backTrafo (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, w: Wash, i: Incubate),
+    matchCL: Tuple(jr2jc: JR2JC, i2ij: I2IJ),
+    matchTR: Tuple(jc: JobCollection, mp: Microplate, ij: IncubateJob, wj: WashJob))
+pre WashJob_New_backTrafo_pre: 
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let w:Wash = matchSL.w in
+let i:Incubate = matchSL.i in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let i2ij:I2IJ = matchCL.i2ij in
+let jc:JobCollection = matchTR.jc in
+let mp:Microplate = matchTR.mp in
+let ij:IncubateJob = matchTR.ij in
+let wj:WashJob = matchTR.wj in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+w.assay->includes(assay) and 
+assay.steps->includes(w) and 
+i.assay->includes(assay) and 
+assay.steps->includes(i) and 
+i.next->includes(w) and 
+w.previous->includes(i) and 
+S2MP.allInstances()->size() = Sample.allInstances()->size() and 
+w.w2wj.wj->size() < Microplate.allInstances()->size() and 
+assay.name <> Undefined and 
+w.id <> Undefined and 
+i.id <> Undefined and
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and 
+ij.jc->includes(jc) and 
+jc.jobs->includes(ij) and 
+mp.jInI->includes(ij) and 
+ij.tPlateI->includes(mp) and 
+ij.next->size() = 0 and
+jc.jobs->includes(wj) and 
+wj.jc->includes(jc) and 
+wj.tPlateW->includes(mp) and 
+mp.jInW->includes(wj) and 
+ij.next->includes(wj) and 
+wj.previous->includes(ij) and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and 
+i2ij.i->includes(i) and 
+i.i2ij->includes(i2ij) and 
+i2ij.ij->includes(ij) and 
+ij.i2ij->includes(i2ij) and
+wj.w2wj->size() = 0
+
+post WashJob_New_backTrafo_post:
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let w:Wash = matchSL.w in
+let i:Incubate = matchSL.i in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let i2ij:I2IJ = matchCL.i2ij in
+let jc:JobCollection = matchTR.jc in
+let mp:Microplate = matchTR.mp in
+let ij:IncubateJob = matchTR.ij in
+let wj:WashJob = matchTR.wj in
+JobRequest.allInstances->includesAll(Set {jr})
+ and
+Assay.allInstances->includesAll(Set {assay})
+ and
+Wash.allInstances->includesAll(Set {w})
+ and
+Incubate.allInstances->includesAll(Set {i})
+ and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+I2IJ.allInstances->includesAll(Set {i2ij})
+ and
+(W2WJ.allInstances - W2WJ.allInstances@pre)->exists(w2wj|
+w2wj.w->includes(w) and
+w.w2wj->includes(w2wj) and
+wj.w2wj->includes(w2wj) and
+w2wj.wj->includes(wj) and
+w2wj.wj.protocolStepName = w2wj.w.id and
+not (w2wj.wj.cavities = Undefined))
+
+context RuleCollection::AddReagent_New_backTrafo (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, ar: AddReagent, r: Reagent, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC, s2mp: S2MP, r2t: R2T),
+    matchTR: Tuple(jc: JobCollection, mp: Microplate, t: Trough, ltj: LiquidTransferJob, tlt: TipLiquidTransfer))
+pre AddReagent_New_backTrafo_pre: 
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let ar:AddReagent = matchSL.ar in
+let r:Reagent = matchSL.r in
+let s:Sample = matchSL.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let s2mp:S2MP = matchCL.s2mp in
+let r2t:R2T = matchCL.r2t in
+let jc:JobCollection = matchTR.jc in
+let mp:Microplate = matchTR.mp in
+let t:Trough = matchTR.t in
+let ltj:LiquidTransferJob = matchTR.ltj in
+let tlt:TipLiquidTransfer = matchTR.tlt in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+ar.assay->includes(assay) and 
+assay.steps->includes(ar) and 
+r.assay->includes(assay) and 
+assay.reagents->includes(r) and 
+ar.rType->includes(r) and 
+r.jAdd->includes(ar) and 
+ar.ar2ltj.ltj.tips->size() <> Sample.allInstances()->size() and 
+ar.ar2ltj.ltj.tips->size() + 1 = s.getId() and 
+ar.ar2ltj.ltj.tips->size().mod(8) = 0 and
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and 
+t.jc->includes(jc) and 
+jc.labware->includes(t) and
+jc.jobs->includes(ltj) and 
+ltj.jc->includes(jc) and 
+t.sJob->includes(ltj) and 
+ltj.source->includes(t) and 
+ltj.target->includes(mp) and 
+mp.tJob->includes(ltj) and 
+ltj.tips->includes(tlt) and 
+tlt.pJob->includes(ltj) and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and 
+s2mp.s->includes(s) and 
+s.s2mp->includes(s2mp) and 
+mp.s2mp->includes(s2mp) and 
+s2mp.mp->includes(mp) and 
+r2t.r->includes(r) and 
+r.r2t->includes(r2t) and 
+r2t.t->includes(t) and 
+t.r2t->includes(r2t) and
+tlt.ar2tlt->size() = 0 and
+ltj.ar2ltj->size() = 0
+
+post AddReagent_New_backTrafo_post:
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let ar:AddReagent = matchSL.ar in
+let r:Reagent = matchSL.r in
+let s:Sample = matchSL.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let s2mp:S2MP = matchCL.s2mp in
+let r2t:R2T = matchCL.r2t in
+let jc:JobCollection = matchTR.jc in
+let mp:Microplate = matchTR.mp in
+let t:Trough = matchTR.t in
+let ltj:LiquidTransferJob = matchTR.ltj in
+let tlt:TipLiquidTransfer = matchTR.tlt in
+JobRequest.allInstances->includesAll(Set {jr})
+ and
+Assay.allInstances->includesAll(Set {assay})
+ and
+AddReagent.allInstances->includesAll(Set {ar})
+ and
+Reagent.allInstances->includesAll(Set {r})
+ and
+Sample.allInstances->includesAll(Set {s})
+ and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+S2MP.allInstances->includesAll(Set {s2mp})
+ and
+R2T.allInstances->includesAll(Set {r2t})
+ and
+(AR2TLT.allInstances - AR2TLT.allInstances@pre)->exists(ar2tlt|
+(AR2LTJ.allInstances - AR2LTJ.allInstances@pre)->exists(ar2ltj|
+ar2tlt.s->includes(s) and
+s.ar2tlt->includes(ar2tlt) and
+tlt.ar2tlt->includes(ar2tlt) and
+ar2tlt.tlt->includes(tlt) and
+ar2ltj.ar->includes(ar) and
+ar.ar2ltj->includes(ar2ltj) and
+ltj.ar2ltj->includes(ar2ltj) and
+ar2ltj.ltj->includes(ltj) and
+true = true and
+true = true and
+true = true))
+
+context RuleCollection::AddReagent_Exist_backTrafo (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, ar: AddReagent, r: Reagent, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC, s2mp: S2MP, r2t: R2T, ar2ltj: AR2LTJ),
+    matchTR: Tuple(jc: JobCollection, mp: Microplate, t: Trough, ltj: LiquidTransferJob, tlt: TipLiquidTransfer))
+pre AddReagent_Exist_backTrafo_pre: 
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let ar:AddReagent = matchSL.ar in
+let r:Reagent = matchSL.r in
+let s:Sample = matchSL.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let s2mp:S2MP = matchCL.s2mp in
+let r2t:R2T = matchCL.r2t in
+let ar2ltj:AR2LTJ = matchCL.ar2ltj in
+let jc:JobCollection = matchTR.jc in
+let mp:Microplate = matchTR.mp in
+let t:Trough = matchTR.t in
+let ltj:LiquidTransferJob = matchTR.ltj in
+let tlt:TipLiquidTransfer = matchTR.tlt in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+ar.assay->includes(assay) and 
+assay.steps->includes(ar) and 
+r.assay->includes(assay) and 
+assay.reagents->includes(r) and 
+ar.rType->includes(r) and 
+r.jAdd->includes(ar) and 
+ar.ar2ltj.ltj.tips->size() <> Sample.allInstances()->size() and 
+ar.ar2ltj.ltj.tips->size() + 1 = s.getId() and 
+ar.ar2ltj.ltj.tips->size().mod(8) <> 0 and
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and 
+t.jc->includes(jc) and 
+jc.labware->includes(t) and 
+jc.jobs->includes(ltj) and 
+ltj.jc->includes(jc) and 
+t.sJob->includes(ltj) and 
+ltj.source->includes(t) and 
+ltj.target->includes(mp) and 
+mp.tJob->includes(ltj) and 
+ltj.tips->size() < 8 and
+ltj.tips->includes(tlt) and 
+tlt.pJob->includes(ltj) and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and 
+s2mp.s->includes(s) and 
+s.s2mp->includes(s2mp) and 
+mp.s2mp->includes(s2mp) and 
+s2mp.mp->includes(mp) and 
+r2t.r->includes(r) and 
+r.r2t->includes(r2t) and 
+r2t.t->includes(t) and 
+t.r2t->includes(r2t) and 
+ar2ltj.ar->includes(ar) and 
+ar.ar2ltj->includes(ar2ltj) and 
+ltj.ar2ltj->includes(ar2ltj) and 
+ar2ltj.ltj->includes(ltj) and
+tlt.ar2tlt->size() = 0
+
+post AddReagent_Exist_backTrafo_post:
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let ar:AddReagent = matchSL.ar in
+let r:Reagent = matchSL.r in
+let s:Sample = matchSL.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let s2mp:S2MP = matchCL.s2mp in
+let r2t:R2T = matchCL.r2t in
+let ar2ltj:AR2LTJ = matchCL.ar2ltj in
+let jc:JobCollection = matchTR.jc in
+let mp:Microplate = matchTR.mp in
+let t:Trough = matchTR.t in
+let ltj:LiquidTransferJob = matchTR.ltj in
+let tlt:TipLiquidTransfer = matchTR.tlt in
+JobRequest.allInstances->includesAll(Set {jr})
+ and
+Assay.allInstances->includesAll(Set {assay})
+ and
+AddReagent.allInstances->includesAll(Set {ar})
+ and
+Reagent.allInstances->includesAll(Set {r})
+ and
+Sample.allInstances->includesAll(Set {s})
+ and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+S2MP.allInstances->includesAll(Set {s2mp})
+ and
+R2T.allInstances->includesAll(Set {r2t})
+ and
+AR2LTJ.allInstances->includesAll(Set {ar2ltj})
+ and
+(AR2TLT.allInstances - AR2TLT.allInstances@pre)->exists(ar2tlt|
+ar2tlt.s->includes(s) and
+s.ar2tlt->includes(ar2tlt) and
+tlt.ar2tlt->includes(ar2tlt) and
+ar2tlt.tlt->includes(tlt) and
+true = true and
+true = true)
+
+context RuleCollection::Distribute_IncubateJob_backTrafo (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, ds: DistributeSample, i: Incubate),
+    matchCL: Tuple(jr2jc: JR2JC, ds2ltj: DS2LTJ, i2ij: I2IJ),
+    matchTR: Tuple(jc: JobCollection, mp: Microplate, ltj: LiquidTransferJob, ij: IncubateJob))
+pre Distribute_IncubateJob_backTrafo_pre: 
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let ds:DistributeSample = matchSL.ds in
+let i:Incubate = matchSL.i in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let ds2ltj:DS2LTJ = matchCL.ds2ltj in
+let i2ij:I2IJ = matchCL.i2ij in
+let jc:JobCollection = matchTR.jc in
+let mp:Microplate = matchTR.mp in
+let ltj:LiquidTransferJob = matchTR.ltj in
+let ij:IncubateJob = matchTR.ij in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+ds.assay->includes(assay) and 
+assay.steps->includes(ds) and 
+i.assay->includes(assay) and 
+assay.steps->includes(i) and 
+ds.next->includes(i) and 
+i.previous->includes(ds) and 
+ds.ds2ltj.ltj.next->size() <> ds.ds2ltj.ltj->size() and 
+assay.name <> Undefined and 
+ds.id <> Undefined and 
+i.id <> Undefined and
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and 
+jc.jobs->includes(ltj) and 
+ltj.jc->includes(jc) and 
+ij.jc->includes(jc) and 
+jc.jobs->includes(ij) and 
+ltj.target->includes(mp) and 
+mp.tJob->includes(ltj) and 
+mp.jInI->includes(ij) and 
+ij.tPlateI->includes(mp) and 
+ltj.next->size() = 0 and
+ij.previous->includes(ltj) and 
+ltj.next->includes(ij) and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and 
+ds.ds2ltj->includes(ds2ltj) and 
+ds2ltj.ds->includes(ds) and 
+ds2ltj.ltj->includes(ltj) and 
+ltj.ds2ltj->includes(ds2ltj) and 
+i2ij.i->includes(i) and 
+i.i2ij->includes(i2ij) and 
+i2ij.ij->includes(ij) and 
+ij.i2ij->includes(i2ij)
+
+post Distribute_IncubateJob_backTrafo_post:
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let ds:DistributeSample = matchSL.ds in
+let i:Incubate = matchSL.i in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let ds2ltj:DS2LTJ = matchCL.ds2ltj in
+let i2ij:I2IJ = matchCL.i2ij in
+let jc:JobCollection = matchTR.jc in
+let mp:Microplate = matchTR.mp in
+let ltj:LiquidTransferJob = matchTR.ltj in
+let ij:IncubateJob = matchTR.ij in
+JobRequest.allInstances->includesAll(Set {jr})
+ and
+Assay.allInstances->includesAll(Set {assay})
+ and
+DistributeSample.allInstances->includesAll(Set {ds})
+ and
+Incubate.allInstances->includesAll(Set {i})
+ and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+DS2LTJ.allInstances->includesAll(Set {ds2ltj})
+ and
+I2IJ.allInstances->includesAll(Set {i2ij})
+
+
+context RuleCollection::AddReagent_IncubateJob_backTrafo (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, i: Incubate, ar: AddReagent),
+    matchCL: Tuple(jr2jc: JR2JC, ar2ltj: AR2LTJ, i2ij: I2IJ),
+    matchTR: Tuple(jc: JobCollection, mp: Microplate, ltj: LiquidTransferJob, ij: IncubateJob))
+pre AddReagent_IncubateJob_backTrafo_pre: 
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let i:Incubate = matchSL.i in
+let ar:AddReagent = matchSL.ar in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let ar2ltj:AR2LTJ = matchCL.ar2ltj in
+let i2ij:I2IJ = matchCL.i2ij in
+let jc:JobCollection = matchTR.jc in
+let mp:Microplate = matchTR.mp in
+let ltj:LiquidTransferJob = matchTR.ltj in
+let ij:IncubateJob = matchTR.ij in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+i.assay->includes(assay) and 
+assay.steps->includes(i) and 
+ar.assay->includes(assay) and 
+assay.steps->includes(ar) and 
+ar.next->includes(i) and 
+i.previous->includes(ar) and 
+ar.ar2ltj.ltj.next->size() <> ar.ar2ltj.ltj->size() and 
+assay.name <> Undefined and 
+i.id <> Undefined and 
+ar.id <> Undefined and
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and 
+jc.jobs->includes(ltj) and 
+ltj.jc->includes(jc) and 
+ij.jc->includes(jc) and 
+jc.jobs->includes(ij) and 
+ltj.target->includes(mp) and 
+mp.tJob->includes(ltj) and 
+mp.jInI->includes(ij) and 
+ij.tPlateI->includes(mp) and 
+ltj.next->size() = 0 and
+ij.previous->includes(ltj) and 
+ltj.next->includes(ij) and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and 
+ar2ltj.ar->includes(ar) and 
+ar.ar2ltj->includes(ar2ltj) and 
+ltj.ar2ltj->includes(ar2ltj) and 
+ar2ltj.ltj->includes(ltj) and 
+i2ij.i->includes(i) and 
+i.i2ij->includes(i2ij) and 
+i2ij.ij->includes(ij) and 
+ij.i2ij->includes(i2ij)
+
+post AddReagent_IncubateJob_backTrafo_post:
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let i:Incubate = matchSL.i in
+let ar:AddReagent = matchSL.ar in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let ar2ltj:AR2LTJ = matchCL.ar2ltj in
+let i2ij:I2IJ = matchCL.i2ij in
+let jc:JobCollection = matchTR.jc in
+let mp:Microplate = matchTR.mp in
+let ltj:LiquidTransferJob = matchTR.ltj in
+let ij:IncubateJob = matchTR.ij in
+JobRequest.allInstances->includesAll(Set {jr})
+ and
+Assay.allInstances->includesAll(Set {assay})
+ and
+Incubate.allInstances->includesAll(Set {i})
+ and
+AddReagent.allInstances->includesAll(Set {ar})
+ and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+AR2LTJ.allInstances->includesAll(Set {ar2ltj})
+ and
+I2IJ.allInstances->includesAll(Set {i2ij})
+
+
+context RuleCollection::WashJob_AddReagent_backTrafo (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, w: Wash, ar: AddReagent),
+    matchCL: Tuple(jr2jc: JR2JC, ar2ltj: AR2LTJ, w2wj: W2WJ),
+    matchTR: Tuple(jc: JobCollection, mp: Microplate, ltj: LiquidTransferJob, wj: WashJob))
+pre WashJob_AddReagent_backTrafo_pre: 
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let w:Wash = matchSL.w in
+let ar:AddReagent = matchSL.ar in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let ar2ltj:AR2LTJ = matchCL.ar2ltj in
+let w2wj:W2WJ = matchCL.w2wj in
+let jc:JobCollection = matchTR.jc in
+let mp:Microplate = matchTR.mp in
+let ltj:LiquidTransferJob = matchTR.ltj in
+let wj:WashJob = matchTR.wj in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+w.assay->includes(assay) and 
+assay.steps->includes(w) and 
+ar.assay->includes(assay) and 
+assay.steps->includes(ar) and 
+ar.previous->includes(w) and 
+w.next->includes(ar) and 
+w.w2wj.wj.next->size() <> ar.ar2ltj.ltj->size() and 
+assay.name <> Undefined and 
+w.id <> Undefined and 
+ar.id <> Undefined and
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and 
+jc.jobs->includes(ltj) and 
+ltj.jc->includes(jc) and 
+jc.jobs->includes(wj) and 
+wj.jc->includes(jc) and 
+ltj.target->includes(mp) and 
+mp.tJob->includes(ltj) and 
+wj.tPlateW->includes(mp) and 
+mp.jInW->includes(wj) and 
+ltj.previous->size() = 0 and
+ltj.previous->includes(wj) and 
+wj.next->includes(ltj) and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and 
+ar2ltj.ar->includes(ar) and 
+ar.ar2ltj->includes(ar2ltj) and 
+ltj.ar2ltj->includes(ar2ltj) and 
+ar2ltj.ltj->includes(ltj) and 
+w2wj.w->includes(w) and 
+w.w2wj->includes(w2wj) and 
+wj.w2wj->includes(w2wj) and 
+w2wj.wj->includes(wj)
+
+post WashJob_AddReagent_backTrafo_post:
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let w:Wash = matchSL.w in
+let ar:AddReagent = matchSL.ar in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let ar2ltj:AR2LTJ = matchCL.ar2ltj in
+let w2wj:W2WJ = matchCL.w2wj in
+let jc:JobCollection = matchTR.jc in
+let mp:Microplate = matchTR.mp in
+let ltj:LiquidTransferJob = matchTR.ltj in
+let wj:WashJob = matchTR.wj in
+JobRequest.allInstances->includesAll(Set {jr})
+ and
+Assay.allInstances->includesAll(Set {assay})
+ and
+Wash.allInstances->includesAll(Set {w})
+ and
+AddReagent.allInstances->includesAll(Set {ar})
+ and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+AR2LTJ.allInstances->includesAll(Set {ar2ltj})
+ and
+W2WJ.allInstances->includesAll(Set {w2wj})
+
+
+context RuleCollection::Incubate_Distribute_backTrafo (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, i: Incubate, ds: DistributeSample),
+    matchCL: Tuple(jr2jc: JR2JC, ds2ltj: DS2LTJ, i2ij: I2IJ),
+    matchTR: Tuple(jc: JobCollection, mp: Microplate, ltj: LiquidTransferJob, ij: IncubateJob))
+pre Incubate_Distribute_backTrafo_pre: 
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let i:Incubate = matchSL.i in
+let ds:DistributeSample = matchSL.ds in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let ds2ltj:DS2LTJ = matchCL.ds2ltj in
+let i2ij:I2IJ = matchCL.i2ij in
+let jc:JobCollection = matchTR.jc in
+let mp:Microplate = matchTR.mp in
+let ltj:LiquidTransferJob = matchTR.ltj in
+let ij:IncubateJob = matchTR.ij in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+i.assay->includes(assay) and 
+assay.steps->includes(i) and 
+ds.assay->includes(assay) and 
+assay.steps->includes(ds) and 
+ds.previous->includes(i) and 
+i.next->includes(ds) and 
+i.i2ij.ij.next->size() <> ds.ds2ltj.ltj->size() and 
+assay.name <> Undefined and 
+i.id <> Undefined and 
+ds.id <> Undefined and
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and 
+jc.jobs->includes(ltj) and 
+ltj.jc->includes(jc) and 
+ij.jc->includes(jc) and 
+jc.jobs->includes(ij) and 
+ltj.target->includes(mp) and 
+mp.tJob->includes(ltj) and 
+mp.jInI->includes(ij) and 
+ij.tPlateI->includes(mp) and 
+ltj.previous->size() = 0 and
+ltj.previous->includes(ij) and 
+ij.next->includes(ltj) and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and 
+ds.ds2ltj->includes(ds2ltj) and 
+ds2ltj.ds->includes(ds) and 
+ds2ltj.ltj->includes(ltj) and 
+ltj.ds2ltj->includes(ds2ltj) and 
+i2ij.i->includes(i) and 
+i.i2ij->includes(i2ij) and 
+i2ij.ij->includes(ij) and 
+ij.i2ij->includes(i2ij)
+
+post Incubate_Distribute_backTrafo_post:
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let i:Incubate = matchSL.i in
+let ds:DistributeSample = matchSL.ds in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let ds2ltj:DS2LTJ = matchCL.ds2ltj in
+let i2ij:I2IJ = matchCL.i2ij in
+let jc:JobCollection = matchTR.jc in
+let mp:Microplate = matchTR.mp in
+let ltj:LiquidTransferJob = matchTR.ltj in
+let ij:IncubateJob = matchTR.ij in
+JobRequest.allInstances->includesAll(Set {jr})
+ and
+Assay.allInstances->includesAll(Set {assay})
+ and
+Incubate.allInstances->includesAll(Set {i})
+ and
+DistributeSample.allInstances->includesAll(Set {ds})
+ and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+DS2LTJ.allInstances->includesAll(Set {ds2ltj})
+ and
+I2IJ.allInstances->includesAll(Set {i2ij})
+
+
+context RuleCollection::JobReq2JobCol_integration (
+    matchSR: Tuple(jr: JobRequest),
+    matchTR: Tuple(jc: JobCollection))
+pre JobReq2JobCol_integration_pre: 
+let jr:JobRequest = matchSR.jr in
+let jc:JobCollection = matchTR.jc in
+jr.jr2jc->size() = 0 and
+jc.jr2jc->size() = 0
+
+post JobReq2JobCol_integration_post:
+let jr:JobRequest = matchSR.jr in
+let jc:JobCollection = matchTR.jc in
+(JR2JC.allInstances - JR2JC.allInstances@pre)->exists(jr2jc|
+jr.jr2jc->includes(jr2jc) and
+jr2jc.jr->includes(jr) and
+jc.jr2jc->includes(jr2jc) and
+jr2jc.jc->includes(jc))
+
+context RuleCollection::reagent2trough_integration (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, r: Reagent),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTR: Tuple(jc: JobCollection, t: Trough))
+pre reagent2trough_integration_pre: 
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let r:Reagent = matchSR.r in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTR.jc in
+let t:Trough = matchTR.t in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+assay.name <> Undefined and
+r.assay->includes(assay) and 
+assay.reagents->includes(r) and 
+r.name <> Undefined and 
+r.r2t = Undefined and
+t.jc->includes(jc) and 
+jc.labware->includes(t) and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and
+r.r2t->size() = 0 and
+t.r2t->size() = 0
+
+post reagent2trough_integration_post:
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let r:Reagent = matchSR.r in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTR.jc in
+let t:Trough = matchTR.t in
+JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+(R2T.allInstances - R2T.allInstances@pre)->exists(r2t|
+r2t.r->includes(r) and
+r.r2t->includes(r2t) and
+r2t.t->includes(t) and
+t.r2t->includes(r2t) and
+r2t.r.name = r2t.t.name)
+
+context RuleCollection::Sample2NewTubeRunner_integration (
+    matchSR: Tuple(jr: JobRequest, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTR: Tuple(jc: JobCollection, tr: TubeRunner))
+pre Sample2NewTubeRunner_integration_pre: 
+let jr:JobRequest = matchSR.jr in
+let s:Sample = matchSR.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTR.jc in
+let tr:TubeRunner = matchTR.tr in
+jr.samples->includes(s) and 
+s.jr->includes(jr) and 
+S2TR.allInstances()->size() <> Sample.allInstances()->size() and 
+s.s2tr = Undefined and 
+s.sampleID <> Undefined and 
+s.state = SampleState::Waiting and 
+S2TR.allInstances()->size() + 1 = s.getId() and 
+S2TR.allInstances()->size().mod(16) = 0 and
+tr.jc->includes(jc) and 
+jc.labware->includes(tr) and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and
+s.s2tr->size() = 0
+
+post Sample2NewTubeRunner_integration_post:
+let jr:JobRequest = matchSR.jr in
+let s:Sample = matchSR.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTR.jc in
+let tr:TubeRunner = matchTR.tr in
+JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+(S2TR.allInstances - S2TR.allInstances@pre)->exists(s2tr|
+s.s2tr->includes(s2tr) and
+s2tr.s->includes(s) and
+s2tr.tr->includes(tr) and
+tr.s2tr->includes(s2tr) and
+s2tr.tr.barcodes.split(' ')->count(s2tr.s.sampleID) = 1)
+
+context RuleCollection::Sample2ExistTubeRunner_integration (
+    matchSR: Tuple(jr: JobRequest, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTR: Tuple(jc: JobCollection, tr: TubeRunner))
+pre Sample2ExistTubeRunner_integration_pre: 
+let jr:JobRequest = matchSR.jr in
+let s:Sample = matchSR.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTR.jc in
+let tr:TubeRunner = matchTR.tr in
+jr.samples->includes(s) and 
+s.jr->includes(jr) and 
+S2TR.allInstances()->size() <> Sample.allInstances()->size() and 
+s.s2tr = Undefined and 
+s.sampleID <> Undefined and 
+s.state = SampleState::Waiting and 
+S2TR.allInstances()->size() + 1 = s.getId() and
+tr.jc->includes(jc) and 
+jc.labware->includes(tr) and 
+tr.barcodes.split(' ')->size() < 16 and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and
+s.s2tr->size() = 0
+
+post Sample2ExistTubeRunner_integration_post:
+let jr:JobRequest = matchSR.jr in
+let s:Sample = matchSR.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTR.jc in
+let tr:TubeRunner = matchTR.tr in
+JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+(S2TR.allInstances - S2TR.allInstances@pre)->exists(s2tr|
+s.s2tr->includes(s2tr) and
+s2tr.s->includes(s) and
+s2tr.tr->includes(tr) and
+tr.s2tr->includes(s2tr) and
+s2tr.tr.barcodes.split(' ')->count(s2tr.s.sampleID) = 1)
+
+context RuleCollection::InitNewMicroplate_integration (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTR: Tuple(jc: JobCollection, mp: Microplate))
+pre InitNewMicroplate_integration_pre: 
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let s:Sample = matchSR.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTR.jc in
+let mp:Microplate = matchTR.mp in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+jr.samples->includes(s) and 
+s.jr->includes(jr) and 
+S2MP.allInstances()->size() <> Sample.allInstances()->size() and 
+assay.name <> Undefined and 
+s.sampleID <> Undefined and 
+s.s2mp = Undefined and 
+S2MP.allInstances()->size() + 1 = s.getId() and 
+S2MP.allInstances()->size().mod(96) = 0 and
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and
+s.s2mp->size() = 0
+
+post InitNewMicroplate_integration_post:
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let s:Sample = matchSR.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTR.jc in
+let mp:Microplate = matchTR.mp in
+JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+(S2MP.allInstances - S2MP.allInstances@pre)->exists(s2mp|
+s2mp.s->includes(s) and
+s.s2mp->includes(s2mp) and
+mp.s2mp->includes(s2mp) and
+s2mp.mp->includes(mp) and
+not (s2mp.mp.name = Undefined))
+
+context RuleCollection::SampleAssignExistMicroplate_integration (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTR: Tuple(jc: JobCollection, mp: Microplate))
+pre SampleAssignExistMicroplate_integration_pre: 
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let s:Sample = matchSR.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTR.jc in
+let mp:Microplate = matchTR.mp in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+jr.samples->includes(s) and 
+s.jr->includes(jr) and 
+S2MP.allInstances()->size() <> Sample.allInstances()->size() and 
+S2MP.allInstances()->size() + 1 = s.getId() and 
+assay.name <> Undefined and 
+s.sampleID <> Undefined and 
+s.s2mp = Undefined and
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and 
+mp.s2mp->size() < 96 and 
+mp.name <> '' and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and
+s.s2mp->size() = 0
+
+post SampleAssignExistMicroplate_integration_post:
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let s:Sample = matchSR.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTR.jc in
+let mp:Microplate = matchTR.mp in
+JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+(S2MP.allInstances - S2MP.allInstances@pre)->exists(s2mp|
+s2mp.s->includes(s) and
+s.s2mp->includes(s2mp) and
+mp.s2mp->includes(s2mp) and
+s2mp.mp->includes(mp))
+
+context RuleCollection::DistributeSample_New_integration (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, ds: DistributeSample, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC, s2tr: S2TR, s2mp: S2MP),
+    matchTR: Tuple(jc: JobCollection, tr: TubeRunner, mp: Microplate, ltj: LiquidTransferJob, tlt: TipLiquidTransfer))
+pre DistributeSample_New_integration_pre: 
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let ds:DistributeSample = matchSR.ds in
+let s:Sample = matchSR.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let s2tr:S2TR = matchCL.s2tr in
+let s2mp:S2MP = matchCL.s2mp in
+let jc:JobCollection = matchTR.jc in
+let tr:TubeRunner = matchTR.tr in
+let mp:Microplate = matchTR.mp in
+let ltj:LiquidTransferJob = matchTR.ltj in
+let tlt:TipLiquidTransfer = matchTR.tlt in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+ds.assay->includes(assay) and 
+assay.steps->includes(ds) and 
+jr.samples->includes(s) and 
+s.jr->includes(jr) and 
+ds.ds2ltj.ltj.tips->size() <> Sample.allInstances()->size() and 
+ds.ds2ltj.ltj.tips->size() + 1 = s.getId() and 
+ds.ds2ltj.ltj.tips->size().mod(8) = 0 and
+tr.jc->includes(jc) and 
+jc.labware->includes(tr) and 
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and
+jc.jobs->includes(ltj) and 
+ltj.jc->includes(jc) and 
+tr.sJob->includes(ltj) and 
+ltj.source->includes(tr) and 
+ltj.target->includes(mp) and 
+mp.tJob->includes(ltj) and 
+ltj.tips->includes(tlt) and 
+tlt.pJob->includes(ltj) and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and 
+s.s2tr->includes(s2tr) and 
+s2tr.s->includes(s) and 
+s2tr.tr->includes(tr) and 
+tr.s2tr->includes(s2tr) and 
+s2mp.s->includes(s) and 
+s.s2mp->includes(s2mp) and 
+mp.s2mp->includes(s2mp) and 
+s2mp.mp->includes(mp) and
+tlt.s2tlt->size() = 0 and
+ltj.ds2ltj->size() = 0
+
+post DistributeSample_New_integration_post:
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let ds:DistributeSample = matchSR.ds in
+let s:Sample = matchSR.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let s2tr:S2TR = matchCL.s2tr in
+let s2mp:S2MP = matchCL.s2mp in
+let jc:JobCollection = matchTR.jc in
+let tr:TubeRunner = matchTR.tr in
+let mp:Microplate = matchTR.mp in
+let ltj:LiquidTransferJob = matchTR.ltj in
+let tlt:TipLiquidTransfer = matchTR.tlt in
+JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+S2TR.allInstances->includesAll(Set {s2tr})
+ and
+S2MP.allInstances->includesAll(Set {s2mp})
+ and
+(S2TLT.allInstances - S2TLT.allInstances@pre)->exists(s2tlt|
+(DS2LTJ.allInstances - DS2LTJ.allInstances@pre)->exists(ds2ltj|
+s.s2tlt->includes(s2tlt) and
+s2tlt.s->includes(s) and
+s2tlt.tlt->includes(tlt) and
+tlt.s2tlt->includes(s2tlt) and
+ds.ds2ltj->includes(ds2ltj) and
+ds2ltj.ds->includes(ds) and
+ds2ltj.ltj->includes(ltj) and
+ltj.ds2ltj->includes(ds2ltj) and
+true = true and
+true = true and
+true = true and
+true = true))
+
+context RuleCollection::DistributeSample_Exist_integration (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, ds: DistributeSample, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC, s2tr: S2TR, s2mp: S2MP, ds2ltj: DS2LTJ),
+    matchTR: Tuple(jc: JobCollection, tr: TubeRunner, mp: Microplate, ltj: LiquidTransferJob, tlt: TipLiquidTransfer))
+pre DistributeSample_Exist_integration_pre: 
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let ds:DistributeSample = matchSR.ds in
+let s:Sample = matchSR.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let s2tr:S2TR = matchCL.s2tr in
+let s2mp:S2MP = matchCL.s2mp in
+let ds2ltj:DS2LTJ = matchCL.ds2ltj in
+let jc:JobCollection = matchTR.jc in
+let tr:TubeRunner = matchTR.tr in
+let mp:Microplate = matchTR.mp in
+let ltj:LiquidTransferJob = matchTR.ltj in
+let tlt:TipLiquidTransfer = matchTR.tlt in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+ds.assay->includes(assay) and 
+assay.steps->includes(ds) and 
+jr.samples->includes(s) and 
+s.jr->includes(jr) and 
+ds.ds2ltj.ltj.tips->size() <> Sample.allInstances()->size() and 
+ds.ds2ltj.ltj.tips->size() + 1 = s.getId() and 
+ds.ds2ltj.ltj.tips->size().mod(8) <> 0 and
+tr.jc->includes(jc) and 
+jc.labware->includes(tr) and 
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and 
+jc.jobs->includes(ltj) and 
+ltj.jc->includes(jc) and 
+tr.sJob->includes(ltj) and 
+ltj.source->includes(tr) and 
+ltj.target->includes(mp) and 
+mp.tJob->includes(ltj) and 
+ltj.tips->size() < 8 and
+ltj.tips->includes(tlt) and 
+tlt.pJob->includes(ltj) and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and 
+s.s2tr->includes(s2tr) and 
+s2tr.s->includes(s) and 
+s2tr.tr->includes(tr) and 
+tr.s2tr->includes(s2tr) and 
+s2mp.s->includes(s) and 
+s.s2mp->includes(s2mp) and 
+mp.s2mp->includes(s2mp) and 
+s2mp.mp->includes(mp) and 
+ds.ds2ltj->includes(ds2ltj) and 
+ds2ltj.ds->includes(ds) and 
+ds2ltj.ltj->includes(ltj) and 
+ltj.ds2ltj->includes(ds2ltj) and
+tlt.s2tlt->size() = 0
+
+post DistributeSample_Exist_integration_post:
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let ds:DistributeSample = matchSR.ds in
+let s:Sample = matchSR.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let s2tr:S2TR = matchCL.s2tr in
+let s2mp:S2MP = matchCL.s2mp in
+let ds2ltj:DS2LTJ = matchCL.ds2ltj in
+let jc:JobCollection = matchTR.jc in
+let tr:TubeRunner = matchTR.tr in
+let mp:Microplate = matchTR.mp in
+let ltj:LiquidTransferJob = matchTR.ltj in
+let tlt:TipLiquidTransfer = matchTR.tlt in
+JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+S2TR.allInstances->includesAll(Set {s2tr})
+ and
+S2MP.allInstances->includesAll(Set {s2mp})
+ and
+DS2LTJ.allInstances->includesAll(Set {ds2ltj})
+ and
+(S2TLT.allInstances - S2TLT.allInstances@pre)->exists(s2tlt|
+s.s2tlt->includes(s2tlt) and
+s2tlt.s->includes(s) and
+s2tlt.tlt->includes(tlt) and
+tlt.s2tlt->includes(s2tlt) and
+true = true and
+true = true and
+true = true)
+
+context RuleCollection::IncubateJob_New_1_integration (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, i: Incubate),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTR: Tuple(jc: JobCollection, mp: Microplate, ij: IncubateJob))
+pre IncubateJob_New_1_integration_pre: 
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let i:Incubate = matchSR.i in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTR.jc in
+let mp:Microplate = matchTR.mp in
+let ij:IncubateJob = matchTR.ij in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+i.assay->includes(assay) and 
+assay.steps->includes(i) and 
+i.i2ij.ij->size() = 0 and 
+assay.name <> Undefined and 
+i.id <> Undefined and
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and
+ij.jc->includes(jc) and 
+jc.jobs->includes(ij) and 
+mp.jInI->includes(ij) and 
+ij.tPlateI->includes(mp) and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and
+ij.i2ij->size() = 0
+
+post IncubateJob_New_1_integration_post:
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let i:Incubate = matchSR.i in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTR.jc in
+let mp:Microplate = matchTR.mp in
+let ij:IncubateJob = matchTR.ij in
+JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+(I2IJ.allInstances - I2IJ.allInstances@pre)->exists(i2ij|
+(I2MP.allInstances - I2MP.allInstances@pre)->exists(i2mp|
+i2ij.i->includes(i) and
+i.i2ij->includes(i2ij) and
+i2ij.ij->includes(ij) and
+ij.i2ij->includes(i2ij) and
+i2mp.i->includes(i) and
+i.i2mp->includes(i2mp) and
+mp.i2mp->includes(i2mp) and
+i2mp.mp->includes(mp) and
+i2ij.ij.protocolStepName = i2ij.i.id and
+i2ij.ij.temperature = i2ij.i.temperature and
+i2ij.ij.duration = i2ij.i.duration))
+
+context RuleCollection::IncubateJob_New_2_integration (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, i: Incubate),
+    matchCL: Tuple(jr2jc: JR2JC, i2ij1: I2IJ),
+    matchTR: Tuple(jc: JobCollection, mp: Microplate, ij1: IncubateJob, ij2: IncubateJob))
+pre IncubateJob_New_2_integration_pre: 
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let i:Incubate = matchSR.i in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let i2ij1:I2IJ = matchCL.i2ij1 in
+let jc:JobCollection = matchTR.jc in
+let mp:Microplate = matchTR.mp in
+let ij1:IncubateJob = matchTR.ij1 in
+let ij2:IncubateJob = matchTR.ij2 in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+i.assay->includes(assay) and 
+assay.steps->includes(i) and 
+i.i2ij.ij->size() > 0 and i.i2ij.ij->size() < Microplate.allInstances()->size() and 
+assay.name <> Undefined and 
+i.id <> Undefined and
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and 
+ij1.jc->includes(jc) and 
+jc.jobs->includes(ij1) and 
+I2MP.allInstances()->exists(e | e.i = ij1.i2ij.i and e.mp = mp) = false and
+ij2.jc->includes(jc) and 
+jc.jobs->includes(ij2) and 
+mp.jInI->includes(ij2) and 
+ij2.tPlateI->includes(mp) and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and 
+i2ij1.i->includes(i) and 
+i.i2ij->includes(i2ij1) and 
+ij1.i2ij->includes(i2ij1) and 
+i2ij1.ij->includes(ij1) and
+ij2.i2ij->size() = 0
+
+post IncubateJob_New_2_integration_post:
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let i:Incubate = matchSR.i in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let i2ij1:I2IJ = matchCL.i2ij1 in
+let jc:JobCollection = matchTR.jc in
+let mp:Microplate = matchTR.mp in
+let ij1:IncubateJob = matchTR.ij1 in
+let ij2:IncubateJob = matchTR.ij2 in
+JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+I2IJ.allInstances->includesAll(Set {i2ij1})
+ and
+(I2IJ.allInstances - I2IJ.allInstances@pre)->exists(i2ij2|
+(I2MP.allInstances - I2MP.allInstances@pre)->exists(i2mp|
+i2ij2.i->includes(i) and
+i.i2ij->includes(i2ij2) and
+i2ij2.ij->includes(ij2) and
+ij2.i2ij->includes(i2ij2) and
+i2mp.i->includes(i) and
+i.i2mp->includes(i2mp) and
+mp.i2mp->includes(i2mp) and
+i2mp.mp->includes(mp) and
+i2ij2.ij.protocolStepName = i2ij2.i.id and
+i2ij2.ij.temperature = i2ij2.i.temperature and
+i2ij2.ij.duration = i2ij2.i.duration))
+
+context RuleCollection::WashJob_New_integration (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, w: Wash, i: Incubate),
+    matchCL: Tuple(jr2jc: JR2JC, i2ij: I2IJ),
+    matchTR: Tuple(jc: JobCollection, mp: Microplate, ij: IncubateJob, wj: WashJob))
+pre WashJob_New_integration_pre: 
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let w:Wash = matchSR.w in
+let i:Incubate = matchSR.i in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let i2ij:I2IJ = matchCL.i2ij in
+let jc:JobCollection = matchTR.jc in
+let mp:Microplate = matchTR.mp in
+let ij:IncubateJob = matchTR.ij in
+let wj:WashJob = matchTR.wj in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+w.assay->includes(assay) and 
+assay.steps->includes(w) and 
+i.assay->includes(assay) and 
+assay.steps->includes(i) and 
+i.next->includes(w) and 
+w.previous->includes(i) and 
+S2MP.allInstances()->size() = Sample.allInstances()->size() and 
+w.w2wj.wj->size() < Microplate.allInstances()->size() and 
+assay.name <> Undefined and 
+w.id <> Undefined and 
+i.id <> Undefined and
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and 
+ij.jc->includes(jc) and 
+jc.jobs->includes(ij) and 
+mp.jInI->includes(ij) and 
+ij.tPlateI->includes(mp) and 
+ij.next->size() = 0 and
+jc.jobs->includes(wj) and 
+wj.jc->includes(jc) and 
+wj.tPlateW->includes(mp) and 
+mp.jInW->includes(wj) and 
+ij.next->includes(wj) and 
+wj.previous->includes(ij) and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and 
+i2ij.i->includes(i) and 
+i.i2ij->includes(i2ij) and 
+i2ij.ij->includes(ij) and 
+ij.i2ij->includes(i2ij) and
+wj.w2wj->size() = 0
+
+post WashJob_New_integration_post:
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let w:Wash = matchSR.w in
+let i:Incubate = matchSR.i in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let i2ij:I2IJ = matchCL.i2ij in
+let jc:JobCollection = matchTR.jc in
+let mp:Microplate = matchTR.mp in
+let ij:IncubateJob = matchTR.ij in
+let wj:WashJob = matchTR.wj in
+JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+I2IJ.allInstances->includesAll(Set {i2ij})
+ and
+(W2WJ.allInstances - W2WJ.allInstances@pre)->exists(w2wj|
+w2wj.w->includes(w) and
+w.w2wj->includes(w2wj) and
+wj.w2wj->includes(w2wj) and
+w2wj.wj->includes(wj) and
+w2wj.wj.protocolStepName = w2wj.w.id and
+not (w2wj.wj.cavities = Undefined))
+
+context RuleCollection::AddReagent_New_integration (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, ar: AddReagent, r: Reagent, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC, s2mp: S2MP, r2t: R2T),
+    matchTR: Tuple(jc: JobCollection, mp: Microplate, t: Trough, ltj: LiquidTransferJob, tlt: TipLiquidTransfer))
+pre AddReagent_New_integration_pre: 
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let ar:AddReagent = matchSR.ar in
+let r:Reagent = matchSR.r in
+let s:Sample = matchSR.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let s2mp:S2MP = matchCL.s2mp in
+let r2t:R2T = matchCL.r2t in
+let jc:JobCollection = matchTR.jc in
+let mp:Microplate = matchTR.mp in
+let t:Trough = matchTR.t in
+let ltj:LiquidTransferJob = matchTR.ltj in
+let tlt:TipLiquidTransfer = matchTR.tlt in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+ar.assay->includes(assay) and 
+assay.steps->includes(ar) and 
+r.assay->includes(assay) and 
+assay.reagents->includes(r) and 
+ar.rType->includes(r) and 
+r.jAdd->includes(ar) and 
+ar.ar2ltj.ltj.tips->size() <> Sample.allInstances()->size() and 
+ar.ar2ltj.ltj.tips->size() + 1 = s.getId() and 
+ar.ar2ltj.ltj.tips->size().mod(8) = 0 and
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and 
+t.jc->includes(jc) and 
+jc.labware->includes(t) and
+jc.jobs->includes(ltj) and 
+ltj.jc->includes(jc) and 
+t.sJob->includes(ltj) and 
+ltj.source->includes(t) and 
+ltj.target->includes(mp) and 
+mp.tJob->includes(ltj) and 
+ltj.tips->includes(tlt) and 
+tlt.pJob->includes(ltj) and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and 
+s2mp.s->includes(s) and 
+s.s2mp->includes(s2mp) and 
+mp.s2mp->includes(s2mp) and 
+s2mp.mp->includes(mp) and 
+r2t.r->includes(r) and 
+r.r2t->includes(r2t) and 
+r2t.t->includes(t) and 
+t.r2t->includes(r2t) and
+tlt.ar2tlt->size() = 0 and
+ltj.ar2ltj->size() = 0
+
+post AddReagent_New_integration_post:
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let ar:AddReagent = matchSR.ar in
+let r:Reagent = matchSR.r in
+let s:Sample = matchSR.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let s2mp:S2MP = matchCL.s2mp in
+let r2t:R2T = matchCL.r2t in
+let jc:JobCollection = matchTR.jc in
+let mp:Microplate = matchTR.mp in
+let t:Trough = matchTR.t in
+let ltj:LiquidTransferJob = matchTR.ltj in
+let tlt:TipLiquidTransfer = matchTR.tlt in
+JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+S2MP.allInstances->includesAll(Set {s2mp})
+ and
+R2T.allInstances->includesAll(Set {r2t})
+ and
+(AR2TLT.allInstances - AR2TLT.allInstances@pre)->exists(ar2tlt|
+(AR2LTJ.allInstances - AR2LTJ.allInstances@pre)->exists(ar2ltj|
+ar2tlt.s->includes(s) and
+s.ar2tlt->includes(ar2tlt) and
+tlt.ar2tlt->includes(ar2tlt) and
+ar2tlt.tlt->includes(tlt) and
+ar2ltj.ar->includes(ar) and
+ar.ar2ltj->includes(ar2ltj) and
+ltj.ar2ltj->includes(ar2ltj) and
+ar2ltj.ltj->includes(ltj) and
+true = true and
+true = true and
+true = true))
+
+context RuleCollection::AddReagent_Exist_integration (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, ar: AddReagent, r: Reagent, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC, s2mp: S2MP, r2t: R2T, ar2ltj: AR2LTJ),
+    matchTR: Tuple(jc: JobCollection, mp: Microplate, t: Trough, ltj: LiquidTransferJob, tlt: TipLiquidTransfer))
+pre AddReagent_Exist_integration_pre: 
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let ar:AddReagent = matchSR.ar in
+let r:Reagent = matchSR.r in
+let s:Sample = matchSR.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let s2mp:S2MP = matchCL.s2mp in
+let r2t:R2T = matchCL.r2t in
+let ar2ltj:AR2LTJ = matchCL.ar2ltj in
+let jc:JobCollection = matchTR.jc in
+let mp:Microplate = matchTR.mp in
+let t:Trough = matchTR.t in
+let ltj:LiquidTransferJob = matchTR.ltj in
+let tlt:TipLiquidTransfer = matchTR.tlt in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+ar.assay->includes(assay) and 
+assay.steps->includes(ar) and 
+r.assay->includes(assay) and 
+assay.reagents->includes(r) and 
+ar.rType->includes(r) and 
+r.jAdd->includes(ar) and 
+ar.ar2ltj.ltj.tips->size() <> Sample.allInstances()->size() and 
+ar.ar2ltj.ltj.tips->size() + 1 = s.getId() and 
+ar.ar2ltj.ltj.tips->size().mod(8) <> 0 and
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and 
+t.jc->includes(jc) and 
+jc.labware->includes(t) and 
+jc.jobs->includes(ltj) and 
+ltj.jc->includes(jc) and 
+t.sJob->includes(ltj) and 
+ltj.source->includes(t) and 
+ltj.target->includes(mp) and 
+mp.tJob->includes(ltj) and 
+ltj.tips->size() < 8 and
+ltj.tips->includes(tlt) and 
+tlt.pJob->includes(ltj) and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and 
+s2mp.s->includes(s) and 
+s.s2mp->includes(s2mp) and 
+mp.s2mp->includes(s2mp) and 
+s2mp.mp->includes(mp) and 
+r2t.r->includes(r) and 
+r.r2t->includes(r2t) and 
+r2t.t->includes(t) and 
+t.r2t->includes(r2t) and 
+ar2ltj.ar->includes(ar) and 
+ar.ar2ltj->includes(ar2ltj) and 
+ltj.ar2ltj->includes(ar2ltj) and 
+ar2ltj.ltj->includes(ltj) and
+tlt.ar2tlt->size() = 0
+
+post AddReagent_Exist_integration_post:
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let ar:AddReagent = matchSR.ar in
+let r:Reagent = matchSR.r in
+let s:Sample = matchSR.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let s2mp:S2MP = matchCL.s2mp in
+let r2t:R2T = matchCL.r2t in
+let ar2ltj:AR2LTJ = matchCL.ar2ltj in
+let jc:JobCollection = matchTR.jc in
+let mp:Microplate = matchTR.mp in
+let t:Trough = matchTR.t in
+let ltj:LiquidTransferJob = matchTR.ltj in
+let tlt:TipLiquidTransfer = matchTR.tlt in
+JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+S2MP.allInstances->includesAll(Set {s2mp})
+ and
+R2T.allInstances->includesAll(Set {r2t})
+ and
+AR2LTJ.allInstances->includesAll(Set {ar2ltj})
+ and
+(AR2TLT.allInstances - AR2TLT.allInstances@pre)->exists(ar2tlt|
+ar2tlt.s->includes(s) and
+s.ar2tlt->includes(ar2tlt) and
+tlt.ar2tlt->includes(ar2tlt) and
+ar2tlt.tlt->includes(tlt) and
+true = true and
+true = true)
+
+context RuleCollection::Distribute_IncubateJob_integration (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, ds: DistributeSample, i: Incubate),
+    matchCL: Tuple(jr2jc: JR2JC, ds2ltj: DS2LTJ, i2ij: I2IJ),
+    matchTR: Tuple(jc: JobCollection, mp: Microplate, ltj: LiquidTransferJob, ij: IncubateJob))
+pre Distribute_IncubateJob_integration_pre: 
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let ds:DistributeSample = matchSR.ds in
+let i:Incubate = matchSR.i in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let ds2ltj:DS2LTJ = matchCL.ds2ltj in
+let i2ij:I2IJ = matchCL.i2ij in
+let jc:JobCollection = matchTR.jc in
+let mp:Microplate = matchTR.mp in
+let ltj:LiquidTransferJob = matchTR.ltj in
+let ij:IncubateJob = matchTR.ij in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+ds.assay->includes(assay) and 
+assay.steps->includes(ds) and 
+i.assay->includes(assay) and 
+assay.steps->includes(i) and 
+ds.next->includes(i) and 
+i.previous->includes(ds) and 
+ds.ds2ltj.ltj.next->size() <> ds.ds2ltj.ltj->size() and 
+assay.name <> Undefined and 
+ds.id <> Undefined and 
+i.id <> Undefined and
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and 
+jc.jobs->includes(ltj) and 
+ltj.jc->includes(jc) and 
+ij.jc->includes(jc) and 
+jc.jobs->includes(ij) and 
+ltj.target->includes(mp) and 
+mp.tJob->includes(ltj) and 
+mp.jInI->includes(ij) and 
+ij.tPlateI->includes(mp) and 
+ltj.next->size() = 0 and
+ij.previous->includes(ltj) and 
+ltj.next->includes(ij) and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and 
+ds.ds2ltj->includes(ds2ltj) and 
+ds2ltj.ds->includes(ds) and 
+ds2ltj.ltj->includes(ltj) and 
+ltj.ds2ltj->includes(ds2ltj) and 
+i2ij.i->includes(i) and 
+i.i2ij->includes(i2ij) and 
+i2ij.ij->includes(ij) and 
+ij.i2ij->includes(i2ij)
+
+post Distribute_IncubateJob_integration_post:
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let ds:DistributeSample = matchSR.ds in
+let i:Incubate = matchSR.i in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let ds2ltj:DS2LTJ = matchCL.ds2ltj in
+let i2ij:I2IJ = matchCL.i2ij in
+let jc:JobCollection = matchTR.jc in
+let mp:Microplate = matchTR.mp in
+let ltj:LiquidTransferJob = matchTR.ltj in
+let ij:IncubateJob = matchTR.ij in
+JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+DS2LTJ.allInstances->includesAll(Set {ds2ltj})
+ and
+I2IJ.allInstances->includesAll(Set {i2ij})
+
+
+context RuleCollection::AddReagent_IncubateJob_integration (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, i: Incubate, ar: AddReagent),
+    matchCL: Tuple(jr2jc: JR2JC, ar2ltj: AR2LTJ, i2ij: I2IJ),
+    matchTR: Tuple(jc: JobCollection, mp: Microplate, ltj: LiquidTransferJob, ij: IncubateJob))
+pre AddReagent_IncubateJob_integration_pre: 
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let i:Incubate = matchSR.i in
+let ar:AddReagent = matchSR.ar in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let ar2ltj:AR2LTJ = matchCL.ar2ltj in
+let i2ij:I2IJ = matchCL.i2ij in
+let jc:JobCollection = matchTR.jc in
+let mp:Microplate = matchTR.mp in
+let ltj:LiquidTransferJob = matchTR.ltj in
+let ij:IncubateJob = matchTR.ij in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+i.assay->includes(assay) and 
+assay.steps->includes(i) and 
+ar.assay->includes(assay) and 
+assay.steps->includes(ar) and 
+ar.next->includes(i) and 
+i.previous->includes(ar) and 
+ar.ar2ltj.ltj.next->size() <> ar.ar2ltj.ltj->size() and 
+assay.name <> Undefined and 
+i.id <> Undefined and 
+ar.id <> Undefined and
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and 
+jc.jobs->includes(ltj) and 
+ltj.jc->includes(jc) and 
+ij.jc->includes(jc) and 
+jc.jobs->includes(ij) and 
+ltj.target->includes(mp) and 
+mp.tJob->includes(ltj) and 
+mp.jInI->includes(ij) and 
+ij.tPlateI->includes(mp) and 
+ltj.next->size() = 0 and
+ij.previous->includes(ltj) and 
+ltj.next->includes(ij) and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and 
+ar2ltj.ar->includes(ar) and 
+ar.ar2ltj->includes(ar2ltj) and 
+ltj.ar2ltj->includes(ar2ltj) and 
+ar2ltj.ltj->includes(ltj) and 
+i2ij.i->includes(i) and 
+i.i2ij->includes(i2ij) and 
+i2ij.ij->includes(ij) and 
+ij.i2ij->includes(i2ij)
+
+post AddReagent_IncubateJob_integration_post:
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let i:Incubate = matchSR.i in
+let ar:AddReagent = matchSR.ar in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let ar2ltj:AR2LTJ = matchCL.ar2ltj in
+let i2ij:I2IJ = matchCL.i2ij in
+let jc:JobCollection = matchTR.jc in
+let mp:Microplate = matchTR.mp in
+let ltj:LiquidTransferJob = matchTR.ltj in
+let ij:IncubateJob = matchTR.ij in
+JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+AR2LTJ.allInstances->includesAll(Set {ar2ltj})
+ and
+I2IJ.allInstances->includesAll(Set {i2ij})
+
+
+context RuleCollection::WashJob_AddReagent_integration (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, w: Wash, ar: AddReagent),
+    matchCL: Tuple(jr2jc: JR2JC, ar2ltj: AR2LTJ, w2wj: W2WJ),
+    matchTR: Tuple(jc: JobCollection, mp: Microplate, ltj: LiquidTransferJob, wj: WashJob))
+pre WashJob_AddReagent_integration_pre: 
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let w:Wash = matchSR.w in
+let ar:AddReagent = matchSR.ar in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let ar2ltj:AR2LTJ = matchCL.ar2ltj in
+let w2wj:W2WJ = matchCL.w2wj in
+let jc:JobCollection = matchTR.jc in
+let mp:Microplate = matchTR.mp in
+let ltj:LiquidTransferJob = matchTR.ltj in
+let wj:WashJob = matchTR.wj in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+w.assay->includes(assay) and 
+assay.steps->includes(w) and 
+ar.assay->includes(assay) and 
+assay.steps->includes(ar) and 
+ar.previous->includes(w) and 
+w.next->includes(ar) and 
+w.w2wj.wj.next->size() <> ar.ar2ltj.ltj->size() and 
+assay.name <> Undefined and 
+w.id <> Undefined and 
+ar.id <> Undefined and
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and 
+jc.jobs->includes(ltj) and 
+ltj.jc->includes(jc) and 
+jc.jobs->includes(wj) and 
+wj.jc->includes(jc) and 
+ltj.target->includes(mp) and 
+mp.tJob->includes(ltj) and 
+wj.tPlateW->includes(mp) and 
+mp.jInW->includes(wj) and 
+ltj.previous->size() = 0 and
+ltj.previous->includes(wj) and 
+wj.next->includes(ltj) and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and 
+ar2ltj.ar->includes(ar) and 
+ar.ar2ltj->includes(ar2ltj) and 
+ltj.ar2ltj->includes(ar2ltj) and 
+ar2ltj.ltj->includes(ltj) and 
+w2wj.w->includes(w) and 
+w.w2wj->includes(w2wj) and 
+wj.w2wj->includes(w2wj) and 
+w2wj.wj->includes(wj)
+
+post WashJob_AddReagent_integration_post:
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let w:Wash = matchSR.w in
+let ar:AddReagent = matchSR.ar in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let ar2ltj:AR2LTJ = matchCL.ar2ltj in
+let w2wj:W2WJ = matchCL.w2wj in
+let jc:JobCollection = matchTR.jc in
+let mp:Microplate = matchTR.mp in
+let ltj:LiquidTransferJob = matchTR.ltj in
+let wj:WashJob = matchTR.wj in
+JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+AR2LTJ.allInstances->includesAll(Set {ar2ltj})
+ and
+W2WJ.allInstances->includesAll(Set {w2wj})
+
+
+context RuleCollection::Incubate_Distribute_integration (
+    matchSR: Tuple(jr: JobRequest, assay: Assay, i: Incubate, ds: DistributeSample),
+    matchCL: Tuple(jr2jc: JR2JC, ds2ltj: DS2LTJ, i2ij: I2IJ),
+    matchTR: Tuple(jc: JobCollection, mp: Microplate, ltj: LiquidTransferJob, ij: IncubateJob))
+pre Incubate_Distribute_integration_pre: 
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let i:Incubate = matchSR.i in
+let ds:DistributeSample = matchSR.ds in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let ds2ltj:DS2LTJ = matchCL.ds2ltj in
+let i2ij:I2IJ = matchCL.i2ij in
+let jc:JobCollection = matchTR.jc in
+let mp:Microplate = matchTR.mp in
+let ltj:LiquidTransferJob = matchTR.ltj in
+let ij:IncubateJob = matchTR.ij in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+i.assay->includes(assay) and 
+assay.steps->includes(i) and 
+ds.assay->includes(assay) and 
+assay.steps->includes(ds) and 
+ds.previous->includes(i) and 
+i.next->includes(ds) and 
+i.i2ij.ij.next->size() <> ds.ds2ltj.ltj->size() and 
+assay.name <> Undefined and 
+i.id <> Undefined and 
+ds.id <> Undefined and
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and 
+jc.jobs->includes(ltj) and 
+ltj.jc->includes(jc) and 
+ij.jc->includes(jc) and 
+jc.jobs->includes(ij) and 
+ltj.target->includes(mp) and 
+mp.tJob->includes(ltj) and 
+mp.jInI->includes(ij) and 
+ij.tPlateI->includes(mp) and 
+ltj.previous->size() = 0 and
+ltj.previous->includes(ij) and 
+ij.next->includes(ltj) and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and 
+ds.ds2ltj->includes(ds2ltj) and 
+ds2ltj.ds->includes(ds) and 
+ds2ltj.ltj->includes(ltj) and 
+ltj.ds2ltj->includes(ds2ltj) and 
+i2ij.i->includes(i) and 
+i.i2ij->includes(i2ij) and 
+i2ij.ij->includes(ij) and 
+ij.i2ij->includes(i2ij)
+
+post Incubate_Distribute_integration_post:
+let jr:JobRequest = matchSR.jr in
+let assay:Assay = matchSR.assay in
+let i:Incubate = matchSR.i in
+let ds:DistributeSample = matchSR.ds in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let ds2ltj:DS2LTJ = matchCL.ds2ltj in
+let i2ij:I2IJ = matchCL.i2ij in
+let jc:JobCollection = matchTR.jc in
+let mp:Microplate = matchTR.mp in
+let ltj:LiquidTransferJob = matchTR.ltj in
+let ij:IncubateJob = matchTR.ij in
+JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+DS2LTJ.allInstances->includesAll(Set {ds2ltj})
+ and
+I2IJ.allInstances->includesAll(Set {i2ij})
+
+
+context RuleCollection::JobReq2JobCol_coEvol ()
+pre JobReq2JobCol_coEvol_pre: 
+true
+
+
+post JobReq2JobCol_coEvol_post:
+(JobRequest.allInstances - JobRequest.allInstances@pre)->exists(jr|
+(JobCollection.allInstances - JobCollection.allInstances@pre)->exists(jc|
+(JR2JC.allInstances - JR2JC.allInstances@pre)->exists(jr2jc|
+jr.jr2jc->includes(jr2jc) and
+jr2jc.jr->includes(jr) and
+jc.jr2jc->includes(jr2jc) and
+jr2jc.jc->includes(jc))))
+
+context RuleCollection::reagent2trough_coEvol (
+    matchSL: Tuple(jr: JobRequest, assay: Assay),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTL: Tuple(jc: JobCollection))
+pre reagent2trough_coEvol_pre: 
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTL.jc in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+assay.name <> Undefined and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc)
+
+post reagent2trough_coEvol_post:
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTL.jc in
+JobRequest.allInstances->includesAll(Set {jr})
+ and
+Assay.allInstances->includesAll(Set {assay})
+ and
+(Reagent.allInstances - Reagent.allInstances@pre)->exists(r|
+r.assay->includes(assay) and
+assay.reagents->includes(r) and
+r.name <> Undefined and
+r.r2t = Undefined and JobCollection.allInstances->includesAll(Set {jc})
+ and
+(Trough.allInstances - Trough.allInstances@pre)->exists(t|
+t.jc->includes(jc) and
+jc.labware->includes(t) and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+(R2T.allInstances - R2T.allInstances@pre)->exists(r2t|
+r2t.r->includes(r) and
+r.r2t->includes(r2t) and
+r2t.t->includes(t) and
+t.r2t->includes(r2t) and
+r2t.r.name = r2t.t.name)))
+
+context RuleCollection::Sample2NewTubeRunner_coEvol (
+    matchSL: Tuple(jr: JobRequest, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTL: Tuple(jc: JobCollection))
+pre Sample2NewTubeRunner_coEvol_pre: 
+let jr:JobRequest = matchSL.jr in
+let s:Sample = matchSL.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTL.jc in
+jr.samples->includes(s) and 
+s.jr->includes(jr) and 
+S2TR.allInstances()->size() <> Sample.allInstances()->size() and 
+s.s2tr = Undefined and 
+s.sampleID <> Undefined and 
+s.state = SampleState::Waiting and 
+S2TR.allInstances()->size() + 1 = s.getId() and 
+S2TR.allInstances()->size().mod(16) = 0 and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc)
+
+post Sample2NewTubeRunner_coEvol_post:
+let jr:JobRequest = matchSL.jr in
+let s:Sample = matchSL.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTL.jc in
+JobRequest.allInstances->includesAll(Set {jr})
+ and
+Sample.allInstances->includesAll(Set {s})
+ and JobCollection.allInstances->includesAll(Set {jc})
+ and
+(TubeRunner.allInstances - TubeRunner.allInstances@pre)->exists(tr|
+tr.jc->includes(jc) and
+jc.labware->includes(tr) and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+(S2TR.allInstances - S2TR.allInstances@pre)->exists(s2tr|
+s.s2tr->includes(s2tr) and
+s2tr.s->includes(s) and
+s2tr.tr->includes(tr) and
+tr.s2tr->includes(s2tr) and
+s2tr.tr.barcodes.split(' ')->count(s2tr.s.sampleID) = 1))
+
+context RuleCollection::Sample2ExistTubeRunner_coEvol (
+    matchSL: Tuple(jr: JobRequest, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTL: Tuple(jc: JobCollection, tr: TubeRunner))
+pre Sample2ExistTubeRunner_coEvol_pre: 
+let jr:JobRequest = matchSL.jr in
+let s:Sample = matchSL.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTL.jc in
+let tr:TubeRunner = matchTL.tr in
+jr.samples->includes(s) and 
+s.jr->includes(jr) and 
+S2TR.allInstances()->size() <> Sample.allInstances()->size() and 
+s.s2tr = Undefined and 
+s.sampleID <> Undefined and 
+s.state = SampleState::Waiting and 
+S2TR.allInstances()->size() + 1 = s.getId() and
+tr.jc->includes(jc) and 
+jc.labware->includes(tr) and 
+tr.barcodes.split(' ')->size() < 16 and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc)
+
+post Sample2ExistTubeRunner_coEvol_post:
+let jr:JobRequest = matchSL.jr in
+let s:Sample = matchSL.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTL.jc in
+let tr:TubeRunner = matchTL.tr in
+JobRequest.allInstances->includesAll(Set {jr})
+ and
+Sample.allInstances->includesAll(Set {s})
+ and JobCollection.allInstances->includesAll(Set {jc})
+ and
+TubeRunner.allInstances->includesAll(Set {tr})
+ and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+(S2TR.allInstances - S2TR.allInstances@pre)->exists(s2tr|
+s.s2tr->includes(s2tr) and
+s2tr.s->includes(s) and
+s2tr.tr->includes(tr) and
+tr.s2tr->includes(s2tr) and
+s2tr.tr.barcodes.split(' ')->count(s2tr.s.sampleID) = 1)
+
+context RuleCollection::InitNewMicroplate_coEvol (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTL: Tuple(jc: JobCollection))
+pre InitNewMicroplate_coEvol_pre: 
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let s:Sample = matchSL.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTL.jc in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+jr.samples->includes(s) and 
+s.jr->includes(jr) and 
+S2MP.allInstances()->size() <> Sample.allInstances()->size() and 
+assay.name <> Undefined and 
+s.sampleID <> Undefined and 
+s.s2mp = Undefined and 
+S2MP.allInstances()->size() + 1 = s.getId() and 
+S2MP.allInstances()->size().mod(96) = 0 and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc)
+
+post InitNewMicroplate_coEvol_post:
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let s:Sample = matchSL.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTL.jc in
+JobRequest.allInstances->includesAll(Set {jr})
+ and
+Assay.allInstances->includesAll(Set {assay})
+ and
+Sample.allInstances->includesAll(Set {s})
+ and JobCollection.allInstances->includesAll(Set {jc})
+ and
+(Microplate.allInstances - Microplate.allInstances@pre)->exists(mp|
+jc.labware->includes(mp) and
+mp.jc->includes(jc) and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+(S2MP.allInstances - S2MP.allInstances@pre)->exists(s2mp|
+s2mp.s->includes(s) and
+s.s2mp->includes(s2mp) and
+mp.s2mp->includes(s2mp) and
+s2mp.mp->includes(mp) and
+not (s2mp.mp.name = Undefined)))
+
+context RuleCollection::SampleAssignExistMicroplate_coEvol (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTL: Tuple(jc: JobCollection, mp: Microplate))
+pre SampleAssignExistMicroplate_coEvol_pre: 
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let s:Sample = matchSL.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTL.jc in
+let mp:Microplate = matchTL.mp in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+jr.samples->includes(s) and 
+s.jr->includes(jr) and 
+S2MP.allInstances()->size() <> Sample.allInstances()->size() and 
+S2MP.allInstances()->size() + 1 = s.getId() and 
+assay.name <> Undefined and 
+s.sampleID <> Undefined and 
+s.s2mp = Undefined and
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and 
+mp.s2mp->size() < 96 and 
+mp.name <> '' and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc)
+
+post SampleAssignExistMicroplate_coEvol_post:
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let s:Sample = matchSL.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTL.jc in
+let mp:Microplate = matchTL.mp in
+JobRequest.allInstances->includesAll(Set {jr})
+ and
+Assay.allInstances->includesAll(Set {assay})
+ and
+Sample.allInstances->includesAll(Set {s})
+ and JobCollection.allInstances->includesAll(Set {jc})
+ and
+Microplate.allInstances->includesAll(Set {mp})
+ and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+(S2MP.allInstances - S2MP.allInstances@pre)->exists(s2mp|
+s2mp.s->includes(s) and
+s.s2mp->includes(s2mp) and
+mp.s2mp->includes(s2mp) and
+s2mp.mp->includes(mp))
+
+context RuleCollection::DistributeSample_New_coEvol (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, ds: DistributeSample, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC, s2tr: S2TR, s2mp: S2MP),
+    matchTL: Tuple(jc: JobCollection, tr: TubeRunner, mp: Microplate))
+pre DistributeSample_New_coEvol_pre: 
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let ds:DistributeSample = matchSL.ds in
+let s:Sample = matchSL.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let s2tr:S2TR = matchCL.s2tr in
+let s2mp:S2MP = matchCL.s2mp in
+let jc:JobCollection = matchTL.jc in
+let tr:TubeRunner = matchTL.tr in
+let mp:Microplate = matchTL.mp in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+ds.assay->includes(assay) and 
+assay.steps->includes(ds) and 
+jr.samples->includes(s) and 
+s.jr->includes(jr) and 
+ds.ds2ltj.ltj.tips->size() <> Sample.allInstances()->size() and 
+ds.ds2ltj.ltj.tips->size() + 1 = s.getId() and 
+ds.ds2ltj.ltj.tips->size().mod(8) = 0 and
+tr.jc->includes(jc) and 
+jc.labware->includes(tr) and 
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and 
+s.s2tr->includes(s2tr) and 
+s2tr.s->includes(s) and 
+s2tr.tr->includes(tr) and 
+tr.s2tr->includes(s2tr) and 
+s2mp.s->includes(s) and 
+s.s2mp->includes(s2mp) and 
+mp.s2mp->includes(s2mp) and 
+s2mp.mp->includes(mp)
+
+post DistributeSample_New_coEvol_post:
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let ds:DistributeSample = matchSL.ds in
+let s:Sample = matchSL.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let s2tr:S2TR = matchCL.s2tr in
+let s2mp:S2MP = matchCL.s2mp in
+let jc:JobCollection = matchTL.jc in
+let tr:TubeRunner = matchTL.tr in
+let mp:Microplate = matchTL.mp in
+JobRequest.allInstances->includesAll(Set {jr})
+ and
+Assay.allInstances->includesAll(Set {assay})
+ and
+DistributeSample.allInstances->includesAll(Set {ds})
+ and
+Sample.allInstances->includesAll(Set {s})
+ and JobCollection.allInstances->includesAll(Set {jc})
+ and
+TubeRunner.allInstances->includesAll(Set {tr})
+ and
+Microplate.allInstances->includesAll(Set {mp})
+ and
+(LiquidTransferJob.allInstances - LiquidTransferJob.allInstances@pre)->exists(ltj|
+(TipLiquidTransfer.allInstances - TipLiquidTransfer.allInstances@pre)->exists(tlt|
+jc.jobs->includes(ltj) and
+ltj.jc->includes(jc) and
+tr.sJob->includes(ltj) and
+ltj.source->includes(tr) and
+ltj.target->includes(mp) and
+mp.tJob->includes(ltj) and
+ltj.tips->includes(tlt) and
+tlt.pJob->includes(ltj) and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+S2TR.allInstances->includesAll(Set {s2tr})
+ and
+S2MP.allInstances->includesAll(Set {s2mp})
+ and
+(S2TLT.allInstances - S2TLT.allInstances@pre)->exists(s2tlt|
+(DS2LTJ.allInstances - DS2LTJ.allInstances@pre)->exists(ds2ltj|
+s.s2tlt->includes(s2tlt) and
+s2tlt.s->includes(s) and
+s2tlt.tlt->includes(tlt) and
+tlt.s2tlt->includes(s2tlt) and
+ds.ds2ltj->includes(ds2ltj) and
+ds2ltj.ds->includes(ds) and
+ds2ltj.ltj->includes(ltj) and
+ltj.ds2ltj->includes(ds2ltj) and
+true = true and
+true = true and
+true = true and
+true = true))))
+
+context RuleCollection::DistributeSample_Exist_coEvol (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, ds: DistributeSample, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC, s2tr: S2TR, s2mp: S2MP, ds2ltj: DS2LTJ),
+    matchTL: Tuple(jc: JobCollection, tr: TubeRunner, mp: Microplate, ltj: LiquidTransferJob))
+pre DistributeSample_Exist_coEvol_pre: 
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let ds:DistributeSample = matchSL.ds in
+let s:Sample = matchSL.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let s2tr:S2TR = matchCL.s2tr in
+let s2mp:S2MP = matchCL.s2mp in
+let ds2ltj:DS2LTJ = matchCL.ds2ltj in
+let jc:JobCollection = matchTL.jc in
+let tr:TubeRunner = matchTL.tr in
+let mp:Microplate = matchTL.mp in
+let ltj:LiquidTransferJob = matchTL.ltj in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+ds.assay->includes(assay) and 
+assay.steps->includes(ds) and 
+jr.samples->includes(s) and 
+s.jr->includes(jr) and 
+ds.ds2ltj.ltj.tips->size() <> Sample.allInstances()->size() and 
+ds.ds2ltj.ltj.tips->size() + 1 = s.getId() and 
+ds.ds2ltj.ltj.tips->size().mod(8) <> 0 and
+tr.jc->includes(jc) and 
+jc.labware->includes(tr) and 
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and 
+jc.jobs->includes(ltj) and 
+ltj.jc->includes(jc) and 
+tr.sJob->includes(ltj) and 
+ltj.source->includes(tr) and 
+ltj.target->includes(mp) and 
+mp.tJob->includes(ltj) and 
+ltj.tips->size() < 8 and
+ltj.tips->size() < 8 and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and 
+s.s2tr->includes(s2tr) and 
+s2tr.s->includes(s) and 
+s2tr.tr->includes(tr) and 
+tr.s2tr->includes(s2tr) and 
+s2mp.s->includes(s) and 
+s.s2mp->includes(s2mp) and 
+mp.s2mp->includes(s2mp) and 
+s2mp.mp->includes(mp) and 
+ds.ds2ltj->includes(ds2ltj) and 
+ds2ltj.ds->includes(ds) and 
+ds2ltj.ltj->includes(ltj) and 
+ltj.ds2ltj->includes(ds2ltj)
+
+post DistributeSample_Exist_coEvol_post:
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let ds:DistributeSample = matchSL.ds in
+let s:Sample = matchSL.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let s2tr:S2TR = matchCL.s2tr in
+let s2mp:S2MP = matchCL.s2mp in
+let ds2ltj:DS2LTJ = matchCL.ds2ltj in
+let jc:JobCollection = matchTL.jc in
+let tr:TubeRunner = matchTL.tr in
+let mp:Microplate = matchTL.mp in
+let ltj:LiquidTransferJob = matchTL.ltj in
+JobRequest.allInstances->includesAll(Set {jr})
+ and
+Assay.allInstances->includesAll(Set {assay})
+ and
+DistributeSample.allInstances->includesAll(Set {ds})
+ and
+Sample.allInstances->includesAll(Set {s})
+ and JobCollection.allInstances->includesAll(Set {jc})
+ and
+TubeRunner.allInstances->includesAll(Set {tr})
+ and
+Microplate.allInstances->includesAll(Set {mp})
+ and
+LiquidTransferJob.allInstances->includesAll(Set {ltj})
+ and
+(TipLiquidTransfer.allInstances - TipLiquidTransfer.allInstances@pre)->exists(tlt|
+ltj.tips->includes(tlt) and
+tlt.pJob->includes(ltj) and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+S2TR.allInstances->includesAll(Set {s2tr})
+ and
+S2MP.allInstances->includesAll(Set {s2mp})
+ and
+DS2LTJ.allInstances->includesAll(Set {ds2ltj})
+ and
+(S2TLT.allInstances - S2TLT.allInstances@pre)->exists(s2tlt|
+s.s2tlt->includes(s2tlt) and
+s2tlt.s->includes(s) and
+s2tlt.tlt->includes(tlt) and
+tlt.s2tlt->includes(s2tlt) and
+true = true and
+true = true and
+true = true))
+
+context RuleCollection::IncubateJob_New_1_coEvol (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, i: Incubate),
+    matchCL: Tuple(jr2jc: JR2JC),
+    matchTL: Tuple(jc: JobCollection, mp: Microplate))
+pre IncubateJob_New_1_coEvol_pre: 
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let i:Incubate = matchSL.i in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTL.jc in
+let mp:Microplate = matchTL.mp in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+i.assay->includes(assay) and 
+assay.steps->includes(i) and 
+i.i2ij.ij->size() = 0 and 
+assay.name <> Undefined and 
+i.id <> Undefined and
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc)
+
+post IncubateJob_New_1_coEvol_post:
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let i:Incubate = matchSL.i in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let jc:JobCollection = matchTL.jc in
+let mp:Microplate = matchTL.mp in
+JobRequest.allInstances->includesAll(Set {jr})
+ and
+Assay.allInstances->includesAll(Set {assay})
+ and
+Incubate.allInstances->includesAll(Set {i})
+ and JobCollection.allInstances->includesAll(Set {jc})
+ and
+Microplate.allInstances->includesAll(Set {mp})
+ and
+(IncubateJob.allInstances - IncubateJob.allInstances@pre)->exists(ij|
+ij.jc->includes(jc) and
+jc.jobs->includes(ij) and
+mp.jInI->includes(ij) and
+ij.tPlateI->includes(mp) and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+(I2IJ.allInstances - I2IJ.allInstances@pre)->exists(i2ij|
+(I2MP.allInstances - I2MP.allInstances@pre)->exists(i2mp|
+i2ij.i->includes(i) and
+i.i2ij->includes(i2ij) and
+i2ij.ij->includes(ij) and
+ij.i2ij->includes(i2ij) and
+i2mp.i->includes(i) and
+i.i2mp->includes(i2mp) and
+mp.i2mp->includes(i2mp) and
+i2mp.mp->includes(mp) and
+i2ij.ij.protocolStepName = i2ij.i.id and
+i2ij.ij.temperature = i2ij.i.temperature and
+i2ij.ij.duration = i2ij.i.duration)))
+
+context RuleCollection::IncubateJob_New_2_coEvol (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, i: Incubate),
+    matchCL: Tuple(jr2jc: JR2JC, i2ij1: I2IJ),
+    matchTL: Tuple(jc: JobCollection, mp: Microplate, ij1: IncubateJob))
+pre IncubateJob_New_2_coEvol_pre: 
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let i:Incubate = matchSL.i in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let i2ij1:I2IJ = matchCL.i2ij1 in
+let jc:JobCollection = matchTL.jc in
+let mp:Microplate = matchTL.mp in
+let ij1:IncubateJob = matchTL.ij1 in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+i.assay->includes(assay) and 
+assay.steps->includes(i) and 
+i.i2ij.ij->size() > 0 and i.i2ij.ij->size() < Microplate.allInstances()->size() and 
+assay.name <> Undefined and 
+i.id <> Undefined and
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and 
+ij1.jc->includes(jc) and 
+jc.jobs->includes(ij1) and 
+I2MP.allInstances()->exists(e | e.i = ij1.i2ij.i and e.mp = mp) = false and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and 
+i2ij1.i->includes(i) and 
+i.i2ij->includes(i2ij1) and 
+ij1.i2ij->includes(i2ij1) and 
+i2ij1.ij->includes(ij1)
+
+post IncubateJob_New_2_coEvol_post:
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let i:Incubate = matchSL.i in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let i2ij1:I2IJ = matchCL.i2ij1 in
+let jc:JobCollection = matchTL.jc in
+let mp:Microplate = matchTL.mp in
+let ij1:IncubateJob = matchTL.ij1 in
+JobRequest.allInstances->includesAll(Set {jr})
+ and
+Assay.allInstances->includesAll(Set {assay})
+ and
+Incubate.allInstances->includesAll(Set {i})
+ and JobCollection.allInstances->includesAll(Set {jc})
+ and
+Microplate.allInstances->includesAll(Set {mp})
+ and
+IncubateJob.allInstances->includesAll(Set {ij1})
+ and
+(IncubateJob.allInstances - IncubateJob.allInstances@pre)->exists(ij2|
+ij2.jc->includes(jc) and
+jc.jobs->includes(ij2) and
+mp.jInI->includes(ij2) and
+ij2.tPlateI->includes(mp) and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+I2IJ.allInstances->includesAll(Set {i2ij1})
+ and
+(I2IJ.allInstances - I2IJ.allInstances@pre)->exists(i2ij2|
+(I2MP.allInstances - I2MP.allInstances@pre)->exists(i2mp|
+i2ij2.i->includes(i) and
+i.i2ij->includes(i2ij2) and
+i2ij2.ij->includes(ij2) and
+ij2.i2ij->includes(i2ij2) and
+i2mp.i->includes(i) and
+i.i2mp->includes(i2mp) and
+mp.i2mp->includes(i2mp) and
+i2mp.mp->includes(mp) and
+i2ij2.ij.protocolStepName = i2ij2.i.id and
+i2ij2.ij.temperature = i2ij2.i.temperature and
+i2ij2.ij.duration = i2ij2.i.duration)))
+
+context RuleCollection::WashJob_New_coEvol (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, w: Wash, i: Incubate),
+    matchCL: Tuple(jr2jc: JR2JC, i2ij: I2IJ),
+    matchTL: Tuple(jc: JobCollection, mp: Microplate, ij: IncubateJob))
+pre WashJob_New_coEvol_pre: 
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let w:Wash = matchSL.w in
+let i:Incubate = matchSL.i in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let i2ij:I2IJ = matchCL.i2ij in
+let jc:JobCollection = matchTL.jc in
+let mp:Microplate = matchTL.mp in
+let ij:IncubateJob = matchTL.ij in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+w.assay->includes(assay) and 
+assay.steps->includes(w) and 
+i.assay->includes(assay) and 
+assay.steps->includes(i) and 
+i.next->includes(w) and 
+w.previous->includes(i) and 
+S2MP.allInstances()->size() = Sample.allInstances()->size() and 
+w.w2wj.wj->size() < Microplate.allInstances()->size() and 
+assay.name <> Undefined and 
+w.id <> Undefined and 
+i.id <> Undefined and
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and 
+ij.jc->includes(jc) and 
+jc.jobs->includes(ij) and 
+mp.jInI->includes(ij) and 
+ij.tPlateI->includes(mp) and 
+ij.next->size() = 0 and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and 
+i2ij.i->includes(i) and 
+i.i2ij->includes(i2ij) and 
+i2ij.ij->includes(ij) and 
+ij.i2ij->includes(i2ij)
+
+post WashJob_New_coEvol_post:
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let w:Wash = matchSL.w in
+let i:Incubate = matchSL.i in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let i2ij:I2IJ = matchCL.i2ij in
+let jc:JobCollection = matchTL.jc in
+let mp:Microplate = matchTL.mp in
+let ij:IncubateJob = matchTL.ij in
+JobRequest.allInstances->includesAll(Set {jr})
+ and
+Assay.allInstances->includesAll(Set {assay})
+ and
+Wash.allInstances->includesAll(Set {w})
+ and
+Incubate.allInstances->includesAll(Set {i})
+ and JobCollection.allInstances->includesAll(Set {jc})
+ and
+Microplate.allInstances->includesAll(Set {mp})
+ and
+IncubateJob.allInstances->includesAll(Set {ij})
+ and
+(WashJob.allInstances - WashJob.allInstances@pre)->exists(wj|
+jc.jobs->includes(wj) and
+wj.jc->includes(jc) and
+wj.tPlateW->includes(mp) and
+mp.jInW->includes(wj) and
+ij.next->includes(wj) and
+wj.previous->includes(ij) and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+I2IJ.allInstances->includesAll(Set {i2ij})
+ and
+(W2WJ.allInstances - W2WJ.allInstances@pre)->exists(w2wj|
+w2wj.w->includes(w) and
+w.w2wj->includes(w2wj) and
+wj.w2wj->includes(w2wj) and
+w2wj.wj->includes(wj) and
+w2wj.wj.protocolStepName = w2wj.w.id and
+not (w2wj.wj.cavities = Undefined)))
+
+context RuleCollection::AddReagent_New_coEvol (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, ar: AddReagent, r: Reagent, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC, s2mp: S2MP, r2t: R2T),
+    matchTL: Tuple(jc: JobCollection, mp: Microplate, t: Trough))
+pre AddReagent_New_coEvol_pre: 
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let ar:AddReagent = matchSL.ar in
+let r:Reagent = matchSL.r in
+let s:Sample = matchSL.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let s2mp:S2MP = matchCL.s2mp in
+let r2t:R2T = matchCL.r2t in
+let jc:JobCollection = matchTL.jc in
+let mp:Microplate = matchTL.mp in
+let t:Trough = matchTL.t in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+ar.assay->includes(assay) and 
+assay.steps->includes(ar) and 
+r.assay->includes(assay) and 
+assay.reagents->includes(r) and 
+ar.rType->includes(r) and 
+r.jAdd->includes(ar) and 
+ar.ar2ltj.ltj.tips->size() <> Sample.allInstances()->size() and 
+ar.ar2ltj.ltj.tips->size() + 1 = s.getId() and 
+ar.ar2ltj.ltj.tips->size().mod(8) = 0 and
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and 
+t.jc->includes(jc) and 
+jc.labware->includes(t) and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and 
+s2mp.s->includes(s) and 
+s.s2mp->includes(s2mp) and 
+mp.s2mp->includes(s2mp) and 
+s2mp.mp->includes(mp) and 
+r2t.r->includes(r) and 
+r.r2t->includes(r2t) and 
+r2t.t->includes(t) and 
+t.r2t->includes(r2t)
+
+post AddReagent_New_coEvol_post:
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let ar:AddReagent = matchSL.ar in
+let r:Reagent = matchSL.r in
+let s:Sample = matchSL.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let s2mp:S2MP = matchCL.s2mp in
+let r2t:R2T = matchCL.r2t in
+let jc:JobCollection = matchTL.jc in
+let mp:Microplate = matchTL.mp in
+let t:Trough = matchTL.t in
+JobRequest.allInstances->includesAll(Set {jr})
+ and
+Assay.allInstances->includesAll(Set {assay})
+ and
+AddReagent.allInstances->includesAll(Set {ar})
+ and
+Reagent.allInstances->includesAll(Set {r})
+ and
+Sample.allInstances->includesAll(Set {s})
+ and JobCollection.allInstances->includesAll(Set {jc})
+ and
+Microplate.allInstances->includesAll(Set {mp})
+ and
+Trough.allInstances->includesAll(Set {t})
+ and
+(LiquidTransferJob.allInstances - LiquidTransferJob.allInstances@pre)->exists(ltj|
+(TipLiquidTransfer.allInstances - TipLiquidTransfer.allInstances@pre)->exists(tlt|
+jc.jobs->includes(ltj) and
+ltj.jc->includes(jc) and
+t.sJob->includes(ltj) and
+ltj.source->includes(t) and
+ltj.target->includes(mp) and
+mp.tJob->includes(ltj) and
+ltj.tips->includes(tlt) and
+tlt.pJob->includes(ltj) and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+S2MP.allInstances->includesAll(Set {s2mp})
+ and
+R2T.allInstances->includesAll(Set {r2t})
+ and
+(AR2TLT.allInstances - AR2TLT.allInstances@pre)->exists(ar2tlt|
+(AR2LTJ.allInstances - AR2LTJ.allInstances@pre)->exists(ar2ltj|
+ar2tlt.s->includes(s) and
+s.ar2tlt->includes(ar2tlt) and
+tlt.ar2tlt->includes(ar2tlt) and
+ar2tlt.tlt->includes(tlt) and
+ar2ltj.ar->includes(ar) and
+ar.ar2ltj->includes(ar2ltj) and
+ltj.ar2ltj->includes(ar2ltj) and
+ar2ltj.ltj->includes(ltj) and
+true = true and
+true = true and
+true = true))))
+
+context RuleCollection::AddReagent_Exist_coEvol (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, ar: AddReagent, r: Reagent, s: Sample),
+    matchCL: Tuple(jr2jc: JR2JC, s2mp: S2MP, r2t: R2T, ar2ltj: AR2LTJ),
+    matchTL: Tuple(jc: JobCollection, mp: Microplate, t: Trough, ltj: LiquidTransferJob))
+pre AddReagent_Exist_coEvol_pre: 
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let ar:AddReagent = matchSL.ar in
+let r:Reagent = matchSL.r in
+let s:Sample = matchSL.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let s2mp:S2MP = matchCL.s2mp in
+let r2t:R2T = matchCL.r2t in
+let ar2ltj:AR2LTJ = matchCL.ar2ltj in
+let jc:JobCollection = matchTL.jc in
+let mp:Microplate = matchTL.mp in
+let t:Trough = matchTL.t in
+let ltj:LiquidTransferJob = matchTL.ltj in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+ar.assay->includes(assay) and 
+assay.steps->includes(ar) and 
+r.assay->includes(assay) and 
+assay.reagents->includes(r) and 
+ar.rType->includes(r) and 
+r.jAdd->includes(ar) and 
+ar.ar2ltj.ltj.tips->size() <> Sample.allInstances()->size() and 
+ar.ar2ltj.ltj.tips->size() + 1 = s.getId() and 
+ar.ar2ltj.ltj.tips->size().mod(8) <> 0 and
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and 
+t.jc->includes(jc) and 
+jc.labware->includes(t) and 
+jc.jobs->includes(ltj) and 
+ltj.jc->includes(jc) and 
+t.sJob->includes(ltj) and 
+ltj.source->includes(t) and 
+ltj.target->includes(mp) and 
+mp.tJob->includes(ltj) and 
+ltj.tips->size() < 8 and
+ltj.tips->size() < 8 and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and 
+s2mp.s->includes(s) and 
+s.s2mp->includes(s2mp) and 
+mp.s2mp->includes(s2mp) and 
+s2mp.mp->includes(mp) and 
+r2t.r->includes(r) and 
+r.r2t->includes(r2t) and 
+r2t.t->includes(t) and 
+t.r2t->includes(r2t) and 
+ar2ltj.ar->includes(ar) and 
+ar.ar2ltj->includes(ar2ltj) and 
+ltj.ar2ltj->includes(ar2ltj) and 
+ar2ltj.ltj->includes(ltj)
+
+post AddReagent_Exist_coEvol_post:
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let ar:AddReagent = matchSL.ar in
+let r:Reagent = matchSL.r in
+let s:Sample = matchSL.s in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let s2mp:S2MP = matchCL.s2mp in
+let r2t:R2T = matchCL.r2t in
+let ar2ltj:AR2LTJ = matchCL.ar2ltj in
+let jc:JobCollection = matchTL.jc in
+let mp:Microplate = matchTL.mp in
+let t:Trough = matchTL.t in
+let ltj:LiquidTransferJob = matchTL.ltj in
+JobRequest.allInstances->includesAll(Set {jr})
+ and
+Assay.allInstances->includesAll(Set {assay})
+ and
+AddReagent.allInstances->includesAll(Set {ar})
+ and
+Reagent.allInstances->includesAll(Set {r})
+ and
+Sample.allInstances->includesAll(Set {s})
+ and JobCollection.allInstances->includesAll(Set {jc})
+ and
+Microplate.allInstances->includesAll(Set {mp})
+ and
+Trough.allInstances->includesAll(Set {t})
+ and
+LiquidTransferJob.allInstances->includesAll(Set {ltj})
+ and
+(TipLiquidTransfer.allInstances - TipLiquidTransfer.allInstances@pre)->exists(tlt|
+ltj.tips->includes(tlt) and
+tlt.pJob->includes(ltj) and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+S2MP.allInstances->includesAll(Set {s2mp})
+ and
+R2T.allInstances->includesAll(Set {r2t})
+ and
+AR2LTJ.allInstances->includesAll(Set {ar2ltj})
+ and
+(AR2TLT.allInstances - AR2TLT.allInstances@pre)->exists(ar2tlt|
+ar2tlt.s->includes(s) and
+s.ar2tlt->includes(ar2tlt) and
+tlt.ar2tlt->includes(ar2tlt) and
+ar2tlt.tlt->includes(tlt) and
+true = true and
+true = true))
+
+context RuleCollection::Distribute_IncubateJob_coEvol (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, ds: DistributeSample, i: Incubate),
+    matchCL: Tuple(jr2jc: JR2JC, ds2ltj: DS2LTJ, i2ij: I2IJ),
+    matchTL: Tuple(jc: JobCollection, mp: Microplate, ltj: LiquidTransferJob, ij: IncubateJob))
+pre Distribute_IncubateJob_coEvol_pre: 
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let ds:DistributeSample = matchSL.ds in
+let i:Incubate = matchSL.i in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let ds2ltj:DS2LTJ = matchCL.ds2ltj in
+let i2ij:I2IJ = matchCL.i2ij in
+let jc:JobCollection = matchTL.jc in
+let mp:Microplate = matchTL.mp in
+let ltj:LiquidTransferJob = matchTL.ltj in
+let ij:IncubateJob = matchTL.ij in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+ds.assay->includes(assay) and 
+assay.steps->includes(ds) and 
+i.assay->includes(assay) and 
+assay.steps->includes(i) and 
+ds.next->includes(i) and 
+i.previous->includes(ds) and 
+ds.ds2ltj.ltj.next->size() <> ds.ds2ltj.ltj->size() and 
+assay.name <> Undefined and 
+ds.id <> Undefined and 
+i.id <> Undefined and
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and 
+jc.jobs->includes(ltj) and 
+ltj.jc->includes(jc) and 
+ij.jc->includes(jc) and 
+jc.jobs->includes(ij) and 
+ltj.target->includes(mp) and 
+mp.tJob->includes(ltj) and 
+mp.jInI->includes(ij) and 
+ij.tPlateI->includes(mp) and 
+ltj.next->size() = 0 and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and 
+ds.ds2ltj->includes(ds2ltj) and 
+ds2ltj.ds->includes(ds) and 
+ds2ltj.ltj->includes(ltj) and 
+ltj.ds2ltj->includes(ds2ltj) and 
+i2ij.i->includes(i) and 
+i.i2ij->includes(i2ij) and 
+i2ij.ij->includes(ij) and 
+ij.i2ij->includes(i2ij)
+
+post Distribute_IncubateJob_coEvol_post:
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let ds:DistributeSample = matchSL.ds in
+let i:Incubate = matchSL.i in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let ds2ltj:DS2LTJ = matchCL.ds2ltj in
+let i2ij:I2IJ = matchCL.i2ij in
+let jc:JobCollection = matchTL.jc in
+let mp:Microplate = matchTL.mp in
+let ltj:LiquidTransferJob = matchTL.ltj in
+let ij:IncubateJob = matchTL.ij in
+JobRequest.allInstances->includesAll(Set {jr})
+ and
+Assay.allInstances->includesAll(Set {assay})
+ and
+DistributeSample.allInstances->includesAll(Set {ds})
+ and
+Incubate.allInstances->includesAll(Set {i})
+ and JobCollection.allInstances->includesAll(Set {jc})
+ and
+Microplate.allInstances->includesAll(Set {mp})
+ and
+LiquidTransferJob.allInstances->includesAll(Set {ltj})
+ and
+IncubateJob.allInstances->includesAll(Set {ij})
+ and
+ij.previous->includes(ltj) and
+ltj.next->includes(ij) and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+DS2LTJ.allInstances->includesAll(Set {ds2ltj})
+ and
+I2IJ.allInstances->includesAll(Set {i2ij})
+
+
+context RuleCollection::AddReagent_IncubateJob_coEvol (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, i: Incubate, ar: AddReagent),
+    matchCL: Tuple(jr2jc: JR2JC, ar2ltj: AR2LTJ, i2ij: I2IJ),
+    matchTL: Tuple(jc: JobCollection, mp: Microplate, ltj: LiquidTransferJob, ij: IncubateJob))
+pre AddReagent_IncubateJob_coEvol_pre: 
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let i:Incubate = matchSL.i in
+let ar:AddReagent = matchSL.ar in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let ar2ltj:AR2LTJ = matchCL.ar2ltj in
+let i2ij:I2IJ = matchCL.i2ij in
+let jc:JobCollection = matchTL.jc in
+let mp:Microplate = matchTL.mp in
+let ltj:LiquidTransferJob = matchTL.ltj in
+let ij:IncubateJob = matchTL.ij in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+i.assay->includes(assay) and 
+assay.steps->includes(i) and 
+ar.assay->includes(assay) and 
+assay.steps->includes(ar) and 
+ar.next->includes(i) and 
+i.previous->includes(ar) and 
+ar.ar2ltj.ltj.next->size() <> ar.ar2ltj.ltj->size() and 
+assay.name <> Undefined and 
+i.id <> Undefined and 
+ar.id <> Undefined and
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and 
+jc.jobs->includes(ltj) and 
+ltj.jc->includes(jc) and 
+ij.jc->includes(jc) and 
+jc.jobs->includes(ij) and 
+ltj.target->includes(mp) and 
+mp.tJob->includes(ltj) and 
+mp.jInI->includes(ij) and 
+ij.tPlateI->includes(mp) and 
+ltj.next->size() = 0 and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and 
+ar2ltj.ar->includes(ar) and 
+ar.ar2ltj->includes(ar2ltj) and 
+ltj.ar2ltj->includes(ar2ltj) and 
+ar2ltj.ltj->includes(ltj) and 
+i2ij.i->includes(i) and 
+i.i2ij->includes(i2ij) and 
+i2ij.ij->includes(ij) and 
+ij.i2ij->includes(i2ij)
+
+post AddReagent_IncubateJob_coEvol_post:
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let i:Incubate = matchSL.i in
+let ar:AddReagent = matchSL.ar in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let ar2ltj:AR2LTJ = matchCL.ar2ltj in
+let i2ij:I2IJ = matchCL.i2ij in
+let jc:JobCollection = matchTL.jc in
+let mp:Microplate = matchTL.mp in
+let ltj:LiquidTransferJob = matchTL.ltj in
+let ij:IncubateJob = matchTL.ij in
+JobRequest.allInstances->includesAll(Set {jr})
+ and
+Assay.allInstances->includesAll(Set {assay})
+ and
+Incubate.allInstances->includesAll(Set {i})
+ and
+AddReagent.allInstances->includesAll(Set {ar})
+ and JobCollection.allInstances->includesAll(Set {jc})
+ and
+Microplate.allInstances->includesAll(Set {mp})
+ and
+LiquidTransferJob.allInstances->includesAll(Set {ltj})
+ and
+IncubateJob.allInstances->includesAll(Set {ij})
+ and
+ij.previous->includes(ltj) and
+ltj.next->includes(ij) and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+AR2LTJ.allInstances->includesAll(Set {ar2ltj})
+ and
+I2IJ.allInstances->includesAll(Set {i2ij})
+
+
+context RuleCollection::WashJob_AddReagent_coEvol (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, w: Wash, ar: AddReagent),
+    matchCL: Tuple(jr2jc: JR2JC, ar2ltj: AR2LTJ, w2wj: W2WJ),
+    matchTL: Tuple(jc: JobCollection, mp: Microplate, ltj: LiquidTransferJob, wj: WashJob))
+pre WashJob_AddReagent_coEvol_pre: 
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let w:Wash = matchSL.w in
+let ar:AddReagent = matchSL.ar in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let ar2ltj:AR2LTJ = matchCL.ar2ltj in
+let w2wj:W2WJ = matchCL.w2wj in
+let jc:JobCollection = matchTL.jc in
+let mp:Microplate = matchTL.mp in
+let ltj:LiquidTransferJob = matchTL.ltj in
+let wj:WashJob = matchTL.wj in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+w.assay->includes(assay) and 
+assay.steps->includes(w) and 
+ar.assay->includes(assay) and 
+assay.steps->includes(ar) and 
+ar.previous->includes(w) and 
+w.next->includes(ar) and 
+w.w2wj.wj.next->size() <> ar.ar2ltj.ltj->size() and 
+assay.name <> Undefined and 
+w.id <> Undefined and 
+ar.id <> Undefined and
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and 
+jc.jobs->includes(ltj) and 
+ltj.jc->includes(jc) and 
+jc.jobs->includes(wj) and 
+wj.jc->includes(jc) and 
+ltj.target->includes(mp) and 
+mp.tJob->includes(ltj) and 
+wj.tPlateW->includes(mp) and 
+mp.jInW->includes(wj) and 
+ltj.previous->size() = 0 and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and 
+ar2ltj.ar->includes(ar) and 
+ar.ar2ltj->includes(ar2ltj) and 
+ltj.ar2ltj->includes(ar2ltj) and 
+ar2ltj.ltj->includes(ltj) and 
+w2wj.w->includes(w) and 
+w.w2wj->includes(w2wj) and 
+wj.w2wj->includes(w2wj) and 
+w2wj.wj->includes(wj)
+
+post WashJob_AddReagent_coEvol_post:
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let w:Wash = matchSL.w in
+let ar:AddReagent = matchSL.ar in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let ar2ltj:AR2LTJ = matchCL.ar2ltj in
+let w2wj:W2WJ = matchCL.w2wj in
+let jc:JobCollection = matchTL.jc in
+let mp:Microplate = matchTL.mp in
+let ltj:LiquidTransferJob = matchTL.ltj in
+let wj:WashJob = matchTL.wj in
+JobRequest.allInstances->includesAll(Set {jr})
+ and
+Assay.allInstances->includesAll(Set {assay})
+ and
+Wash.allInstances->includesAll(Set {w})
+ and
+AddReagent.allInstances->includesAll(Set {ar})
+ and JobCollection.allInstances->includesAll(Set {jc})
+ and
+Microplate.allInstances->includesAll(Set {mp})
+ and
+LiquidTransferJob.allInstances->includesAll(Set {ltj})
+ and
+WashJob.allInstances->includesAll(Set {wj})
+ and
+ltj.previous->includes(wj) and
+wj.next->includes(ltj) and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+AR2LTJ.allInstances->includesAll(Set {ar2ltj})
+ and
+W2WJ.allInstances->includesAll(Set {w2wj})
+
+
+context RuleCollection::Incubate_Distribute_coEvol (
+    matchSL: Tuple(jr: JobRequest, assay: Assay, i: Incubate, ds: DistributeSample),
+    matchCL: Tuple(jr2jc: JR2JC, ds2ltj: DS2LTJ, i2ij: I2IJ),
+    matchTL: Tuple(jc: JobCollection, mp: Microplate, ltj: LiquidTransferJob, ij: IncubateJob))
+pre Incubate_Distribute_coEvol_pre: 
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let i:Incubate = matchSL.i in
+let ds:DistributeSample = matchSL.ds in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let ds2ltj:DS2LTJ = matchCL.ds2ltj in
+let i2ij:I2IJ = matchCL.i2ij in
+let jc:JobCollection = matchTL.jc in
+let mp:Microplate = matchTL.mp in
+let ltj:LiquidTransferJob = matchTL.ltj in
+let ij:IncubateJob = matchTL.ij in
+jr.assay->includes(assay) and 
+assay.jobRequest->includes(jr) and 
+i.assay->includes(assay) and 
+assay.steps->includes(i) and 
+ds.assay->includes(assay) and 
+assay.steps->includes(ds) and 
+ds.previous->includes(i) and 
+i.next->includes(ds) and 
+i.i2ij.ij.next->size() <> ds.ds2ltj.ltj->size() and 
+assay.name <> Undefined and 
+i.id <> Undefined and 
+ds.id <> Undefined and
+jc.labware->includes(mp) and 
+mp.jc->includes(jc) and 
+jc.jobs->includes(ltj) and 
+ltj.jc->includes(jc) and 
+ij.jc->includes(jc) and 
+jc.jobs->includes(ij) and 
+ltj.target->includes(mp) and 
+mp.tJob->includes(ltj) and 
+mp.jInI->includes(ij) and 
+ij.tPlateI->includes(mp) and 
+ltj.previous->size() = 0 and
+jr.jr2jc->includes(jr2jc) and 
+jr2jc.jr->includes(jr) and 
+jc.jr2jc->includes(jr2jc) and 
+jr2jc.jc->includes(jc) and 
+ds.ds2ltj->includes(ds2ltj) and 
+ds2ltj.ds->includes(ds) and 
+ds2ltj.ltj->includes(ltj) and 
+ltj.ds2ltj->includes(ds2ltj) and 
+i2ij.i->includes(i) and 
+i.i2ij->includes(i2ij) and 
+i2ij.ij->includes(ij) and 
+ij.i2ij->includes(i2ij)
+
+post Incubate_Distribute_coEvol_post:
+let jr:JobRequest = matchSL.jr in
+let assay:Assay = matchSL.assay in
+let i:Incubate = matchSL.i in
+let ds:DistributeSample = matchSL.ds in
+let jr2jc:JR2JC = matchCL.jr2jc in
+let ds2ltj:DS2LTJ = matchCL.ds2ltj in
+let i2ij:I2IJ = matchCL.i2ij in
+let jc:JobCollection = matchTL.jc in
+let mp:Microplate = matchTL.mp in
+let ltj:LiquidTransferJob = matchTL.ltj in
+let ij:IncubateJob = matchTL.ij in
+JobRequest.allInstances->includesAll(Set {jr})
+ and
+Assay.allInstances->includesAll(Set {assay})
+ and
+Incubate.allInstances->includesAll(Set {i})
+ and
+DistributeSample.allInstances->includesAll(Set {ds})
+ and JobCollection.allInstances->includesAll(Set {jc})
+ and
+Microplate.allInstances->includesAll(Set {mp})
+ and
+LiquidTransferJob.allInstances->includesAll(Set {ltj})
+ and
+IncubateJob.allInstances->includesAll(Set {ij})
+ and
+ltj.previous->includes(ij) and
+ij.next->includes(ltj) and JR2JC.allInstances->includesAll(Set {jr2jc})
+ and
+DS2LTJ.allInstances->includesAll(Set {ds2ltj})
+ and
+I2IJ.allInstances->includesAll(Set {i2ij})
+

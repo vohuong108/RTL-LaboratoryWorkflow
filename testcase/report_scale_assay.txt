@@ -1,0 +1,6 @@
+scale_assay_1: 715
+scale_assay_2: 896
+scale_assay_4: 1717
+scale_assay_8: 5276
+scale_assay_16: 29446
+scale_assay_32: 257430

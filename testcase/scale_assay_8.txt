@@ -1,0 +1,377 @@
+!new JobRequest('jr')
+!new Assay('assay')
+!assay.name := 'AbstractElisa'
+!insert (jr, assay) into AssayRegistration
+!new Reagent('r1')
+!r1.name := 'Conjugate'
+!new Reagent('r2')
+!r2.name := 'Substrate'
+!insert (assay, r1) into Reagents
+!insert (assay, r2) into Reagents
+!new Sample('s1')
+!s1.sampleID := 'Sample0001'
+!new Sample('s2')
+!s2.sampleID := 'Sample0002'
+!new Sample('s3')
+!s3.sampleID := 'Sample0003'
+!new Sample('s4')
+!s4.sampleID := 'Sample0004'
+!new Sample('s5')
+!s5.sampleID := 'Sample0005'
+!new Sample('s6')
+!s6.sampleID := 'Sample0006'
+!new Sample('s7')
+!s7.sampleID := 'Sample0007'
+!new Sample('s8')
+!s8.sampleID := 'Sample0008'
+!insert (jr, s1) into SampleRegistration
+!insert (jr, s2) into SampleRegistration
+!insert (jr, s3) into SampleRegistration
+!insert (jr, s4) into SampleRegistration
+!insert (jr, s5) into SampleRegistration
+!insert (jr, s6) into SampleRegistration
+!insert (jr, s7) into SampleRegistration
+!insert (jr, s8) into SampleRegistration
+!new DistributeSample('ds1')
+!ds1.id := 'AddSample'
+!ds1.volume := 100
+!insert (assay, ds1) into Steps
+!new Incubate('i1')
+!i1.id := 'BindAntibodies'
+!i1.temperature := 310.15
+!i1.duration := 40
+!insert (assay, i1) into Steps
+!insert (ds1, i1) into TraceStep
+!new Wash('w1')
+!w1.id := 'WashAfterAntibodiesBound'
+!insert (assay, w1) into Steps
+!insert (i1, w1) into TraceStep
+!new AddReagent('ar1')
+!ar1.id := 'AddConjugate'
+!ar1.volume := 100
+!insert (assay, ar1) into Steps
+!insert (w1, ar1) into TraceStep
+!insert (r1, ar1) into UsedReagentType
+!new Incubate('i2')
+!i2.id := 'BindConjugate'
+!i2.temperature := 310.15
+!i2.duration := 40
+!insert (assay, i2) into Steps
+!insert (ar1, i2) into TraceStep
+!new Wash('w2')
+!w2.id := 'WashConjugate'
+!insert (assay, w2) into Steps
+!insert (i2, w2) into TraceStep
+!new AddReagent('ar2')
+!ar2.id := 'AddSubstrate'
+!ar2.volume := 100
+!insert (assay, ar2) into Steps
+!insert (w2, ar2) into TraceStep
+!insert (r2, ar2) into UsedReagentType
+!new Incubate('i3')
+!i3.id := 'WaitForColorReaction'
+!i3.temperature := 310.15
+!i3.duration := 40
+!insert (assay, i3) into Steps
+!insert (ar2, i3) into TraceStep
+!new DistributeSample('ds2')
+!ds2.id := 'AddSample2'
+!ds2.volume := 100
+!insert (assay, ds2) into Steps
+!insert (i3, ds2) into TraceStep
+!new Incubate('i4')
+!i4.id := 'BindAntibodies2'
+!i4.temperature := 310.15
+!i4.duration := 40
+!insert (assay, i4) into Steps
+!insert (ds2, i4) into TraceStep
+!new Wash('w3')
+!w3.id := 'WashAfterAntibodiesBound2'
+!insert (assay, w3) into Steps
+!insert (i4, w3) into TraceStep
+!new AddReagent('ar3')
+!ar3.id := 'AddConjugate2'
+!ar3.volume := 100
+!insert (assay, ar3) into Steps
+!insert (w3, ar3) into TraceStep
+!insert (r1, ar3) into UsedReagentType
+!new Incubate('i5')
+!i5.id := 'BindConjugate2'
+!i5.temperature := 310.15
+!i5.duration := 40
+!insert (assay, i5) into Steps
+!insert (ar3, i5) into TraceStep
+!new Wash('w4')
+!w4.id := 'WashConjugate2'
+!insert (assay, w4) into Steps
+!insert (i5, w4) into TraceStep
+!new AddReagent('ar4')
+!ar4.id := 'AddSubstrate2'
+!ar4.volume := 100
+!insert (assay, ar4) into Steps
+!insert (w4, ar4) into TraceStep
+!insert (r2, ar4) into UsedReagentType
+!new Incubate('i6')
+!i6.id := 'WaitForColorReaction2'
+!i6.temperature := 310.15
+!i6.duration := 40
+!insert (assay, i6) into Steps
+!insert (ar4, i6) into TraceStep
+!new DistributeSample('ds3')
+!ds3.id := 'AddSample3'
+!ds3.volume := 100
+!insert (assay, ds3) into Steps
+!insert (i6, ds3) into TraceStep
+!new Incubate('i7')
+!i7.id := 'BindAntibodies3'
+!i7.temperature := 310.15
+!i7.duration := 40
+!insert (assay, i7) into Steps
+!insert (ds3, i7) into TraceStep
+!new Wash('w5')
+!w5.id := 'WashAfterAntibodiesBound3'
+!insert (assay, w5) into Steps
+!insert (i7, w5) into TraceStep
+!new AddReagent('ar5')
+!ar5.id := 'AddConjugate3'
+!ar5.volume := 100
+!insert (assay, ar5) into Steps
+!insert (w5, ar5) into TraceStep
+!insert (r1, ar5) into UsedReagentType
+!new Incubate('i8')
+!i8.id := 'BindConjugate3'
+!i8.temperature := 310.15
+!i8.duration := 40
+!insert (assay, i8) into Steps
+!insert (ar5, i8) into TraceStep
+!new Wash('w6')
+!w6.id := 'WashConjugate3'
+!insert (assay, w6) into Steps
+!insert (i8, w6) into TraceStep
+!new AddReagent('ar6')
+!ar6.id := 'AddSubstrate3'
+!ar6.volume := 100
+!insert (assay, ar6) into Steps
+!insert (w6, ar6) into TraceStep
+!insert (r2, ar6) into UsedReagentType
+!new Incubate('i9')
+!i9.id := 'WaitForColorReaction3'
+!i9.temperature := 310.15
+!i9.duration := 40
+!insert (assay, i9) into Steps
+!insert (ar6, i9) into TraceStep
+!new DistributeSample('ds4')
+!ds4.id := 'AddSample4'
+!ds4.volume := 100
+!insert (assay, ds4) into Steps
+!insert (i9, ds4) into TraceStep
+!new Incubate('i10')
+!i10.id := 'BindAntibodies4'
+!i10.temperature := 310.15
+!i10.duration := 40
+!insert (assay, i10) into Steps
+!insert (ds4, i10) into TraceStep
+!new Wash('w7')
+!w7.id := 'WashAfterAntibodiesBound4'
+!insert (assay, w7) into Steps
+!insert (i10, w7) into TraceStep
+!new AddReagent('ar7')
+!ar7.id := 'AddConjugate4'
+!ar7.volume := 100
+!insert (assay, ar7) into Steps
+!insert (w7, ar7) into TraceStep
+!insert (r1, ar7) into UsedReagentType
+!new Incubate('i11')
+!i11.id := 'BindConjugate4'
+!i11.temperature := 310.15
+!i11.duration := 40
+!insert (assay, i11) into Steps
+!insert (ar7, i11) into TraceStep
+!new Wash('w8')
+!w8.id := 'WashConjugate4'
+!insert (assay, w8) into Steps
+!insert (i11, w8) into TraceStep
+!new AddReagent('ar8')
+!ar8.id := 'AddSubstrate4'
+!ar8.volume := 100
+!insert (assay, ar8) into Steps
+!insert (w8, ar8) into TraceStep
+!insert (r2, ar8) into UsedReagentType
+!new Incubate('i12')
+!i12.id := 'WaitForColorReaction4'
+!i12.temperature := 310.15
+!i12.duration := 40
+!insert (assay, i12) into Steps
+!insert (ar8, i12) into TraceStep
+!new DistributeSample('ds5')
+!ds5.id := 'AddSample5'
+!ds5.volume := 100
+!insert (assay, ds5) into Steps
+!insert (i12, ds5) into TraceStep
+!new Incubate('i13')
+!i13.id := 'BindAntibodies5'
+!i13.temperature := 310.15
+!i13.duration := 40
+!insert (assay, i13) into Steps
+!insert (ds5, i13) into TraceStep
+!new Wash('w9')
+!w9.id := 'WashAfterAntibodiesBound5'
+!insert (assay, w9) into Steps
+!insert (i13, w9) into TraceStep
+!new AddReagent('ar9')
+!ar9.id := 'AddConjugate5'
+!ar9.volume := 100
+!insert (assay, ar9) into Steps
+!insert (w9, ar9) into TraceStep
+!insert (r1, ar9) into UsedReagentType
+!new Incubate('i14')
+!i14.id := 'BindConjugate5'
+!i14.temperature := 310.15
+!i14.duration := 40
+!insert (assay, i14) into Steps
+!insert (ar9, i14) into TraceStep
+!new Wash('w10')
+!w10.id := 'WashConjugate5'
+!insert (assay, w10) into Steps
+!insert (i14, w10) into TraceStep
+!new AddReagent('ar10')
+!ar10.id := 'AddSubstrate5'
+!ar10.volume := 100
+!insert (assay, ar10) into Steps
+!insert (w10, ar10) into TraceStep
+!insert (r2, ar10) into UsedReagentType
+!new Incubate('i15')
+!i15.id := 'WaitForColorReaction5'
+!i15.temperature := 310.15
+!i15.duration := 40
+!insert (assay, i15) into Steps
+!insert (ar10, i15) into TraceStep
+!new DistributeSample('ds6')
+!ds6.id := 'AddSample6'
+!ds6.volume := 100
+!insert (assay, ds6) into Steps
+!insert (i15, ds6) into TraceStep
+!new Incubate('i16')
+!i16.id := 'BindAntibodies6'
+!i16.temperature := 310.15
+!i16.duration := 40
+!insert (assay, i16) into Steps
+!insert (ds6, i16) into TraceStep
+!new Wash('w11')
+!w11.id := 'WashAfterAntibodiesBound6'
+!insert (assay, w11) into Steps
+!insert (i16, w11) into TraceStep
+!new AddReagent('ar11')
+!ar11.id := 'AddConjugate6'
+!ar11.volume := 100
+!insert (assay, ar11) into Steps
+!insert (w11, ar11) into TraceStep
+!insert (r1, ar11) into UsedReagentType
+!new Incubate('i17')
+!i17.id := 'BindConjugate6'
+!i17.temperature := 310.15
+!i17.duration := 40
+!insert (assay, i17) into Steps
+!insert (ar11, i17) into TraceStep
+!new Wash('w12')
+!w12.id := 'WashConjugate6'
+!insert (assay, w12) into Steps
+!insert (i17, w12) into TraceStep
+!new AddReagent('ar12')
+!ar12.id := 'AddSubstrate6'
+!ar12.volume := 100
+!insert (assay, ar12) into Steps
+!insert (w12, ar12) into TraceStep
+!insert (r2, ar12) into UsedReagentType
+!new Incubate('i18')
+!i18.id := 'WaitForColorReaction6'
+!i18.temperature := 310.15
+!i18.duration := 40
+!insert (assay, i18) into Steps
+!insert (ar12, i18) into TraceStep
+!new DistributeSample('ds7')
+!ds7.id := 'AddSample7'
+!ds7.volume := 100
+!insert (assay, ds7) into Steps
+!insert (i18, ds7) into TraceStep
+!new Incubate('i19')
+!i19.id := 'BindAntibodies7'
+!i19.temperature := 310.15
+!i19.duration := 40
+!insert (assay, i19) into Steps
+!insert (ds7, i19) into TraceStep
+!new Wash('w13')
+!w13.id := 'WashAfterAntibodiesBound7'
+!insert (assay, w13) into Steps
+!insert (i19, w13) into TraceStep
+!new AddReagent('ar13')
+!ar13.id := 'AddConjugate7'
+!ar13.volume := 100
+!insert (assay, ar13) into Steps
+!insert (w13, ar13) into TraceStep
+!insert (r1, ar13) into UsedReagentType
+!new Incubate('i20')
+!i20.id := 'BindConjugate7'
+!i20.temperature := 310.15
+!i20.duration := 40
+!insert (assay, i20) into Steps
+!insert (ar13, i20) into TraceStep
+!new Wash('w14')
+!w14.id := 'WashConjugate7'
+!insert (assay, w14) into Steps
+!insert (i20, w14) into TraceStep
+!new AddReagent('ar14')
+!ar14.id := 'AddSubstrate7'
+!ar14.volume := 100
+!insert (assay, ar14) into Steps
+!insert (w14, ar14) into TraceStep
+!insert (r2, ar14) into UsedReagentType
+!new Incubate('i21')
+!i21.id := 'WaitForColorReaction7'
+!i21.temperature := 310.15
+!i21.duration := 40
+!insert (assay, i21) into Steps
+!insert (ar14, i21) into TraceStep
+!new DistributeSample('ds8')
+!ds8.id := 'AddSample8'
+!ds8.volume := 100
+!insert (assay, ds8) into Steps
+!insert (i21, ds8) into TraceStep
+!new Incubate('i22')
+!i22.id := 'BindAntibodies8'
+!i22.temperature := 310.15
+!i22.duration := 40
+!insert (assay, i22) into Steps
+!insert (ds8, i22) into TraceStep
+!new Wash('w15')
+!w15.id := 'WashAfterAntibodiesBound8'
+!insert (assay, w15) into Steps
+!insert (i22, w15) into TraceStep
+!new AddReagent('ar15')
+!ar15.id := 'AddConjugate8'
+!ar15.volume := 100
+!insert (assay, ar15) into Steps
+!insert (w15, ar15) into TraceStep
+!insert (r1, ar15) into UsedReagentType
+!new Incubate('i23')
+!i23.id := 'BindConjugate8'
+!i23.temperature := 310.15
+!i23.duration := 40
+!insert (assay, i23) into Steps
+!insert (ar15, i23) into TraceStep
+!new Wash('w16')
+!w16.id := 'WashConjugate8'
+!insert (assay, w16) into Steps
+!insert (i23, w16) into TraceStep
+!new AddReagent('ar16')
+!ar16.id := 'AddSubstrate8'
+!ar16.volume := 100
+!insert (assay, ar16) into Steps
+!insert (w16, ar16) into TraceStep
+!insert (r2, ar16) into UsedReagentType
+!new Incubate('i24')
+!i24.id := 'WaitForColorReaction8'
+!i24.temperature := 310.15
+!i24.duration := 40
+!insert (assay, i24) into Steps
+!insert (ar16, i24) into TraceStep
