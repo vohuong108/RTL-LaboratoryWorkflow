@@ -184,10 +184,10 @@ checkSource(
     [ds.ds2ltj.ltj.tips->size() + 1 = s.getId()]
     [ds.ds2ltj.ltj.tips->size().mod(8) = 0]
 
-    --[assay.name <> Undefined]
-    --[ds.id <> Undefined]
-    --[s.sampleID <> Undefined]
-    --[s.state = SampleState::Waiting]
+    [assay.name <> Undefined]
+    [ds.id <> Undefined]
+    [s.sampleID <> Undefined]
+    [s.state = SampleState::Waiting]
     
 ){
 
@@ -199,8 +199,8 @@ checkSource(
     (jc, tr): LabwareRegistration
     (jc, mp): LabwareRegistration
 
-    --[tr.barcodes <> '']
-    --[mp.name <> Undefined]
+    [tr.barcodes <> '']
+    [mp.name <> Undefined]
 ){
     ltj: LiquidTransferJob
     tlt: TipLiquidTransfer
@@ -252,10 +252,10 @@ checkSource(
     [ds.ds2ltj.ltj.tips->size() + 1 = s.getId()]
     [ds.ds2ltj.ltj.tips->size().mod(8) <> 0]
 
-    --[assay.name <> Undefined]
-    --[ds.id <> Undefined]
-    --[s.sampleID <> Undefined]
-    --[s.state = SampleState::Waiting]
+    [assay.name <> Undefined]
+    [ds.id <> Undefined]
+    [s.sampleID <> Undefined]
+    [s.state = SampleState::Waiting]
     
 ){
 
@@ -272,8 +272,8 @@ checkSource(
     (mp, ltj): TrgTransfer
 
     [ltj.tips->size() < 8]
-    --[tr.barcodes <> '']
-    --[mp.name <> Undefined]
+    [tr.barcodes <> '']
+    [mp.name <> Undefined]
     
 ){
     
@@ -458,11 +458,11 @@ checkSource(
     [ar.ar2ltj.ltj.tips->size() + 1 = s.getId()]
     [ar.ar2ltj.ltj.tips->size().mod(8) = 0]
 
-    --[assay.name <> Undefined]
-    --[ar.id <> Undefined]
-    --[s.sampleID <> Undefined]
-    --[s.state = SampleState::Waiting]
-    --[r.name <> Undefined]
+    [assay.name <> Undefined]
+    [ar.id <> Undefined]
+    [s.sampleID <> Undefined]
+    [s.state = SampleState::Waiting]
+    [r.name <> Undefined]
 
 ){
 
@@ -474,8 +474,8 @@ checkSource(
     (jc, mp): LabwareRegistration
     (jc, t): LabwareRegistration
 
-    --[mp.name <> Undefined]
-    --[t.name <> Undefined]
+    [mp.name <> Undefined]
+    [t.name <> Undefined]
 ){
     ltj: LiquidTransferJob
     tlt: TipLiquidTransfer
@@ -524,11 +524,11 @@ checkSource(
     [ar.ar2ltj.ltj.tips->size() + 1 = s.getId()]
     [ar.ar2ltj.ltj.tips->size().mod(8) <> 0]
 
-    --[assay.name <> Undefined]
-    --[ar.id <> Undefined]
-    --[s.sampleID <> Undefined]
-    --[s.state = SampleState::Waiting]
-    --[r.name <> Undefined]
+    [assay.name <> Undefined]
+    [ar.id <> Undefined]
+    [s.sampleID <> Undefined]
+    [s.state = SampleState::Waiting]
+    [r.name <> Undefined]
 ){
 
 }checkTarget(
@@ -546,8 +546,8 @@ checkSource(
 
     [ltj.tips->size() < 8]
 
-    --[mp.name <> Undefined]
-    --[t.name <> Undefined]
+    [mp.name <> Undefined]
+    [t.name <> Undefined]
 ){
     
     tlt: TipLiquidTransfer
