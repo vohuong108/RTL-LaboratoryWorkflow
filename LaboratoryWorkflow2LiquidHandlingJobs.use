@@ -354,11 +354,11 @@ context S2TR inv:
 context S2MP inv:
     not (self.mp.name = Undefined)
 context S2TLT inv:
-    true = true and true = true and true = true
+    self.s.jr.convertSampleEnum(self.s.state) = self.tlt.pJob.jc.convertJobEnum(self.tlt.status) and self.tlt.sourceCavityIndex = self.s.getSrcTubeOrder() and self.tlt.targetCavityIndex = self.s.getPlateIndex() and self.tlt.volume = self.tlt.pJob.ds2ltj.ds.volume
 context DS2LTJ inv:
-    true = true
+    self.ltj.protocolStepName = self.ds.id
 context S2TLT inv:
-    true = true and true = true and true = true
+    self.s.jr.convertSampleEnum(self.s.state) = self.tlt.pJob.jc.convertJobEnum(self.tlt.status) and self.tlt.sourceCavityIndex = self.s.getSrcTubeOrder() and self.tlt.targetCavityIndex = self.s.getPlateIndex() and self.tlt.volume = self.tlt.pJob.ds2ltj.ds.volume
 context I2IJ inv:
     self.ij.protocolStepName = self.i.id and self.ij.temperature = self.i.temperature and self.ij.duration = self.i.duration
 context I2IJ inv:
@@ -366,11 +366,11 @@ context I2IJ inv:
 context W2WJ inv:
     self.wj.protocolStepName = self.w.id and not (self.wj.cavities = Undefined)
 context AR2TLT inv:
-    true = true and true = true
+    self.s.jr.convertSampleEnum(self.s.state) = self.tlt.pJob.jc.convertJobEnum(self.tlt.status) and self.tlt.targetCavityIndex = self.s.getPlateIndex() and self.tlt.volume = self.tlt.pJob.ar2ltj.ar.volume
 context AR2LTJ inv:
-    true = true
+    self.ltj.protocolStepName = self.ar.id
 context AR2TLT inv:
-    true = true and true = true
+    self.s.jr.convertSampleEnum(self.s.state) = self.tlt.pJob.jc.convertJobEnum(self.tlt.status) and self.tlt.targetCavityIndex = self.s.getPlateIndex() and self.tlt.volume = self.tlt.pJob.ar2ltj.ar.volume
 
 ---------- RuleCollection ----------
 class RuleCollection
@@ -909,11 +909,17 @@ jr.samples->includes(s) and
 s.jr->includes(jr) and 
 ds.ds2ltj.ltj.tips->size() <> Sample.allInstances()->size() and 
 ds.ds2ltj.ltj.tips->size() + 1 = s.getId() and 
-ds.ds2ltj.ltj.tips->size().mod(8) = 0 and
+ds.ds2ltj.ltj.tips->size().mod(8) = 0 and 
+assay.name <> Undefined and 
+ds.id <> Undefined and 
+s.sampleID <> Undefined and 
+s.state = SampleState::Waiting and
 tr.jc->includes(jc) and 
 jc.labware->includes(tr) and 
 jc.labware->includes(mp) and 
-mp.jc->includes(jc) and
+mp.jc->includes(jc) and 
+tr.barcodes <> '' and 
+mp.name <> Undefined and
 jr.jr2jc->includes(jr2jc) and 
 jr2jc.jr->includes(jr) and 
 jc.jr2jc->includes(jr2jc) and 
@@ -969,10 +975,11 @@ ds.ds2ltj->includes(ds2ltj) and
 ds2ltj.ds->includes(ds) and
 ds2ltj.ltj->includes(ltj) and
 ltj.ds2ltj->includes(ds2ltj) and
-true = true and
-true = true and
-true = true and
-true = true))))
+s2tlt.s.jr.convertSampleEnum(s2tlt.s.state) = s2tlt.tlt.pJob.jc.convertJobEnum(s2tlt.tlt.status) and
+s2tlt.tlt.sourceCavityIndex = s2tlt.s.getSrcTubeOrder() and
+s2tlt.tlt.targetCavityIndex = s2tlt.s.getPlateIndex() and
+s2tlt.tlt.volume = s2tlt.tlt.pJob.ds2ltj.ds.volume and
+ds2ltj.ltj.protocolStepName = ds2ltj.ds.id))))
 
 context RuleCollection::DistributeSample_Exist_forwTrafo (
     matchSR: Tuple(jr: JobRequest, assay: Assay, ds: DistributeSample, s: Sample),
@@ -999,7 +1006,11 @@ jr.samples->includes(s) and
 s.jr->includes(jr) and 
 ds.ds2ltj.ltj.tips->size() <> Sample.allInstances()->size() and 
 ds.ds2ltj.ltj.tips->size() + 1 = s.getId() and 
-ds.ds2ltj.ltj.tips->size().mod(8) <> 0 and
+ds.ds2ltj.ltj.tips->size().mod(8) <> 0 and 
+assay.name <> Undefined and 
+ds.id <> Undefined and 
+s.sampleID <> Undefined and 
+s.state = SampleState::Waiting and
 tr.jc->includes(jc) and 
 jc.labware->includes(tr) and 
 jc.labware->includes(mp) and 
@@ -1010,7 +1021,9 @@ tr.sJob->includes(ltj) and
 ltj.source->includes(tr) and 
 ltj.target->includes(mp) and 
 mp.tJob->includes(ltj) and 
-ltj.tips->size() < 8 and
+ltj.tips->size() < 8 and 
+tr.barcodes <> '' and 
+mp.name <> Undefined and
 ltj.tips->size() < 8 and
 jr.jr2jc->includes(jr2jc) and 
 jr2jc.jr->includes(jr) and 
@@ -1065,9 +1078,10 @@ s.s2tlt->includes(s2tlt) and
 s2tlt.s->includes(s) and
 s2tlt.tlt->includes(tlt) and
 tlt.s2tlt->includes(s2tlt) and
-true = true and
-true = true and
-true = true))
+s2tlt.s.jr.convertSampleEnum(s2tlt.s.state) = s2tlt.tlt.pJob.jc.convertJobEnum(s2tlt.tlt.status) and
+s2tlt.tlt.sourceCavityIndex = s2tlt.s.getSrcTubeOrder() and
+s2tlt.tlt.targetCavityIndex = s2tlt.s.getPlateIndex() and
+s2tlt.tlt.volume = s2tlt.tlt.pJob.ds2ltj.ds.volume))
 
 context RuleCollection::IncubateJob_New_1_forwTrafo (
     matchSR: Tuple(jr: JobRequest, assay: Assay, i: Incubate),
@@ -1299,11 +1313,18 @@ ar.rType->includes(r) and
 r.jAdd->includes(ar) and 
 ar.ar2ltj.ltj.tips->size() <> Sample.allInstances()->size() and 
 ar.ar2ltj.ltj.tips->size() + 1 = s.getId() and 
-ar.ar2ltj.ltj.tips->size().mod(8) = 0 and
+ar.ar2ltj.ltj.tips->size().mod(8) = 0 and 
+assay.name <> Undefined and 
+ar.id <> Undefined and 
+s.sampleID <> Undefined and 
+s.state = SampleState::Waiting and 
+r.name <> Undefined and
 jc.labware->includes(mp) and 
 mp.jc->includes(jc) and 
 t.jc->includes(jc) and 
-jc.labware->includes(t) and
+jc.labware->includes(t) and 
+mp.name <> Undefined and 
+t.name <> Undefined and
 jr.jr2jc->includes(jr2jc) and 
 jr2jc.jr->includes(jr) and 
 jc.jr2jc->includes(jr2jc) and 
@@ -1360,9 +1381,10 @@ ar2ltj.ar->includes(ar) and
 ar.ar2ltj->includes(ar2ltj) and
 ltj.ar2ltj->includes(ar2ltj) and
 ar2ltj.ltj->includes(ltj) and
-true = true and
-true = true and
-true = true))))
+ar2tlt.s.jr.convertSampleEnum(ar2tlt.s.state) = ar2tlt.tlt.pJob.jc.convertJobEnum(ar2tlt.tlt.status) and
+ar2tlt.tlt.targetCavityIndex = ar2tlt.s.getPlateIndex() and
+ar2tlt.tlt.volume = ar2tlt.tlt.pJob.ar2ltj.ar.volume and
+ar2ltj.ltj.protocolStepName = ar2ltj.ar.id))))
 
 context RuleCollection::AddReagent_Exist_forwTrafo (
     matchSR: Tuple(jr: JobRequest, assay: Assay, ar: AddReagent, r: Reagent, s: Sample),
@@ -1392,7 +1414,12 @@ ar.rType->includes(r) and
 r.jAdd->includes(ar) and 
 ar.ar2ltj.ltj.tips->size() <> Sample.allInstances()->size() and 
 ar.ar2ltj.ltj.tips->size() + 1 = s.getId() and 
-ar.ar2ltj.ltj.tips->size().mod(8) <> 0 and
+ar.ar2ltj.ltj.tips->size().mod(8) <> 0 and 
+assay.name <> Undefined and 
+ar.id <> Undefined and 
+s.sampleID <> Undefined and 
+s.state = SampleState::Waiting and 
+r.name <> Undefined and
 jc.labware->includes(mp) and 
 mp.jc->includes(jc) and 
 t.jc->includes(jc) and 
@@ -1403,7 +1430,9 @@ t.sJob->includes(ltj) and
 ltj.source->includes(t) and 
 ltj.target->includes(mp) and 
 mp.tJob->includes(ltj) and 
-ltj.tips->size() < 8 and
+ltj.tips->size() < 8 and 
+mp.name <> Undefined and 
+t.name <> Undefined and
 ltj.tips->size() < 8 and
 jr.jr2jc->includes(jr2jc) and 
 jr2jc.jr->includes(jr) and 
@@ -1459,8 +1488,9 @@ ar2tlt.s->includes(s) and
 s.ar2tlt->includes(ar2tlt) and
 tlt.ar2tlt->includes(ar2tlt) and
 ar2tlt.tlt->includes(tlt) and
-true = true and
-true = true))
+ar2tlt.s.jr.convertSampleEnum(ar2tlt.s.state) = ar2tlt.tlt.pJob.jc.convertJobEnum(ar2tlt.tlt.status) and
+ar2tlt.tlt.targetCavityIndex = ar2tlt.s.getPlateIndex() and
+ar2tlt.tlt.volume = ar2tlt.tlt.pJob.ar2ltj.ar.volume))
 
 context RuleCollection::Distribute_IncubateJob_forwTrafo (
     matchSR: Tuple(jr: JobRequest, assay: Assay, ds: DistributeSample, i: Incubate),
@@ -2050,11 +2080,17 @@ jr.samples->includes(s) and
 s.jr->includes(jr) and 
 ds.ds2ltj.ltj.tips->size() <> Sample.allInstances()->size() and 
 ds.ds2ltj.ltj.tips->size() + 1 = s.getId() and 
-ds.ds2ltj.ltj.tips->size().mod(8) = 0 and
+ds.ds2ltj.ltj.tips->size().mod(8) = 0 and 
+assay.name <> Undefined and 
+ds.id <> Undefined and 
+s.sampleID <> Undefined and 
+s.state = SampleState::Waiting and
 tr.jc->includes(jc) and 
 jc.labware->includes(tr) and 
 jc.labware->includes(mp) and 
-mp.jc->includes(jc) and
+mp.jc->includes(jc) and 
+tr.barcodes <> '' and 
+mp.name <> Undefined and
 jc.jobs->includes(ltj) and 
 ltj.jc->includes(jc) and 
 tr.sJob->includes(ltj) and 
@@ -2114,10 +2150,11 @@ ds.ds2ltj->includes(ds2ltj) and
 ds2ltj.ds->includes(ds) and
 ds2ltj.ltj->includes(ltj) and
 ltj.ds2ltj->includes(ds2ltj) and
-true = true and
-true = true and
-true = true and
-true = true))
+s2tlt.s.jr.convertSampleEnum(s2tlt.s.state) = s2tlt.tlt.pJob.jc.convertJobEnum(s2tlt.tlt.status) and
+s2tlt.tlt.sourceCavityIndex = s2tlt.s.getSrcTubeOrder() and
+s2tlt.tlt.targetCavityIndex = s2tlt.s.getPlateIndex() and
+s2tlt.tlt.volume = s2tlt.tlt.pJob.ds2ltj.ds.volume and
+ds2ltj.ltj.protocolStepName = ds2ltj.ds.id))
 
 context RuleCollection::DistributeSample_Exist_backTrafo (
     matchSL: Tuple(jr: JobRequest, assay: Assay, ds: DistributeSample, s: Sample),
@@ -2145,7 +2182,11 @@ jr.samples->includes(s) and
 s.jr->includes(jr) and 
 ds.ds2ltj.ltj.tips->size() <> Sample.allInstances()->size() and 
 ds.ds2ltj.ltj.tips->size() + 1 = s.getId() and 
-ds.ds2ltj.ltj.tips->size().mod(8) <> 0 and
+ds.ds2ltj.ltj.tips->size().mod(8) <> 0 and 
+assay.name <> Undefined and 
+ds.id <> Undefined and 
+s.sampleID <> Undefined and 
+s.state = SampleState::Waiting and
 tr.jc->includes(jc) and 
 jc.labware->includes(tr) and 
 jc.labware->includes(mp) and 
@@ -2156,7 +2197,9 @@ tr.sJob->includes(ltj) and
 ltj.source->includes(tr) and 
 ltj.target->includes(mp) and 
 mp.tJob->includes(ltj) and 
-ltj.tips->size() < 8 and
+ltj.tips->size() < 8 and 
+tr.barcodes <> '' and 
+mp.name <> Undefined and
 ltj.tips->includes(tlt) and 
 tlt.pJob->includes(ltj) and
 jr.jr2jc->includes(jr2jc) and 
@@ -2211,9 +2254,10 @@ s.s2tlt->includes(s2tlt) and
 s2tlt.s->includes(s) and
 s2tlt.tlt->includes(tlt) and
 tlt.s2tlt->includes(s2tlt) and
-true = true and
-true = true and
-true = true)
+s2tlt.s.jr.convertSampleEnum(s2tlt.s.state) = s2tlt.tlt.pJob.jc.convertJobEnum(s2tlt.tlt.status) and
+s2tlt.tlt.sourceCavityIndex = s2tlt.s.getSrcTubeOrder() and
+s2tlt.tlt.targetCavityIndex = s2tlt.s.getPlateIndex() and
+s2tlt.tlt.volume = s2tlt.tlt.pJob.ds2ltj.ds.volume)
 
 context RuleCollection::IncubateJob_New_1_backTrafo (
     matchSL: Tuple(jr: JobRequest, assay: Assay, i: Incubate),
@@ -2457,11 +2501,18 @@ ar.rType->includes(r) and
 r.jAdd->includes(ar) and 
 ar.ar2ltj.ltj.tips->size() <> Sample.allInstances()->size() and 
 ar.ar2ltj.ltj.tips->size() + 1 = s.getId() and 
-ar.ar2ltj.ltj.tips->size().mod(8) = 0 and
+ar.ar2ltj.ltj.tips->size().mod(8) = 0 and 
+assay.name <> Undefined and 
+ar.id <> Undefined and 
+s.sampleID <> Undefined and 
+s.state = SampleState::Waiting and 
+r.name <> Undefined and
 jc.labware->includes(mp) and 
 mp.jc->includes(jc) and 
 t.jc->includes(jc) and 
-jc.labware->includes(t) and
+jc.labware->includes(t) and 
+mp.name <> Undefined and 
+t.name <> Undefined and
 jc.jobs->includes(ltj) and 
 ltj.jc->includes(jc) and 
 t.sJob->includes(ltj) and 
@@ -2524,9 +2575,10 @@ ar2ltj.ar->includes(ar) and
 ar.ar2ltj->includes(ar2ltj) and
 ltj.ar2ltj->includes(ar2ltj) and
 ar2ltj.ltj->includes(ltj) and
-true = true and
-true = true and
-true = true))
+ar2tlt.s.jr.convertSampleEnum(ar2tlt.s.state) = ar2tlt.tlt.pJob.jc.convertJobEnum(ar2tlt.tlt.status) and
+ar2tlt.tlt.targetCavityIndex = ar2tlt.s.getPlateIndex() and
+ar2tlt.tlt.volume = ar2tlt.tlt.pJob.ar2ltj.ar.volume and
+ar2ltj.ltj.protocolStepName = ar2ltj.ar.id))
 
 context RuleCollection::AddReagent_Exist_backTrafo (
     matchSL: Tuple(jr: JobRequest, assay: Assay, ar: AddReagent, r: Reagent, s: Sample),
@@ -2557,7 +2609,12 @@ ar.rType->includes(r) and
 r.jAdd->includes(ar) and 
 ar.ar2ltj.ltj.tips->size() <> Sample.allInstances()->size() and 
 ar.ar2ltj.ltj.tips->size() + 1 = s.getId() and 
-ar.ar2ltj.ltj.tips->size().mod(8) <> 0 and
+ar.ar2ltj.ltj.tips->size().mod(8) <> 0 and 
+assay.name <> Undefined and 
+ar.id <> Undefined and 
+s.sampleID <> Undefined and 
+s.state = SampleState::Waiting and 
+r.name <> Undefined and
 jc.labware->includes(mp) and 
 mp.jc->includes(jc) and 
 t.jc->includes(jc) and 
@@ -2568,7 +2625,9 @@ t.sJob->includes(ltj) and
 ltj.source->includes(t) and 
 ltj.target->includes(mp) and 
 mp.tJob->includes(ltj) and 
-ltj.tips->size() < 8 and
+ltj.tips->size() < 8 and 
+mp.name <> Undefined and 
+t.name <> Undefined and
 ltj.tips->includes(tlt) and 
 tlt.pJob->includes(ltj) and
 jr.jr2jc->includes(jr2jc) and 
@@ -2626,8 +2685,9 @@ ar2tlt.s->includes(s) and
 s.ar2tlt->includes(ar2tlt) and
 tlt.ar2tlt->includes(ar2tlt) and
 ar2tlt.tlt->includes(tlt) and
-true = true and
-true = true)
+ar2tlt.s.jr.convertSampleEnum(ar2tlt.s.state) = ar2tlt.tlt.pJob.jc.convertJobEnum(ar2tlt.tlt.status) and
+ar2tlt.tlt.targetCavityIndex = ar2tlt.s.getPlateIndex() and
+ar2tlt.tlt.volume = ar2tlt.tlt.pJob.ar2ltj.ar.volume)
 
 context RuleCollection::Distribute_IncubateJob_backTrafo (
     matchSL: Tuple(jr: JobRequest, assay: Assay, ds: DistributeSample, i: Incubate),
@@ -3207,11 +3267,17 @@ jr.samples->includes(s) and
 s.jr->includes(jr) and 
 ds.ds2ltj.ltj.tips->size() <> Sample.allInstances()->size() and 
 ds.ds2ltj.ltj.tips->size() + 1 = s.getId() and 
-ds.ds2ltj.ltj.tips->size().mod(8) = 0 and
+ds.ds2ltj.ltj.tips->size().mod(8) = 0 and 
+assay.name <> Undefined and 
+ds.id <> Undefined and 
+s.sampleID <> Undefined and 
+s.state = SampleState::Waiting and
 tr.jc->includes(jc) and 
 jc.labware->includes(tr) and 
 jc.labware->includes(mp) and 
-mp.jc->includes(jc) and
+mp.jc->includes(jc) and 
+tr.barcodes <> '' and 
+mp.name <> Undefined and
 jc.jobs->includes(ltj) and 
 ltj.jc->includes(jc) and 
 tr.sJob->includes(ltj) and 
@@ -3264,10 +3330,11 @@ ds.ds2ltj->includes(ds2ltj) and
 ds2ltj.ds->includes(ds) and
 ds2ltj.ltj->includes(ltj) and
 ltj.ds2ltj->includes(ds2ltj) and
-true = true and
-true = true and
-true = true and
-true = true))
+s2tlt.s.jr.convertSampleEnum(s2tlt.s.state) = s2tlt.tlt.pJob.jc.convertJobEnum(s2tlt.tlt.status) and
+s2tlt.tlt.sourceCavityIndex = s2tlt.s.getSrcTubeOrder() and
+s2tlt.tlt.targetCavityIndex = s2tlt.s.getPlateIndex() and
+s2tlt.tlt.volume = s2tlt.tlt.pJob.ds2ltj.ds.volume and
+ds2ltj.ltj.protocolStepName = ds2ltj.ds.id))
 
 context RuleCollection::DistributeSample_Exist_integration (
     matchSR: Tuple(jr: JobRequest, assay: Assay, ds: DistributeSample, s: Sample),
@@ -3295,7 +3362,11 @@ jr.samples->includes(s) and
 s.jr->includes(jr) and 
 ds.ds2ltj.ltj.tips->size() <> Sample.allInstances()->size() and 
 ds.ds2ltj.ltj.tips->size() + 1 = s.getId() and 
-ds.ds2ltj.ltj.tips->size().mod(8) <> 0 and
+ds.ds2ltj.ltj.tips->size().mod(8) <> 0 and 
+assay.name <> Undefined and 
+ds.id <> Undefined and 
+s.sampleID <> Undefined and 
+s.state = SampleState::Waiting and
 tr.jc->includes(jc) and 
 jc.labware->includes(tr) and 
 jc.labware->includes(mp) and 
@@ -3306,7 +3377,9 @@ tr.sJob->includes(ltj) and
 ltj.source->includes(tr) and 
 ltj.target->includes(mp) and 
 mp.tJob->includes(ltj) and 
-ltj.tips->size() < 8 and
+ltj.tips->size() < 8 and 
+tr.barcodes <> '' and 
+mp.name <> Undefined and
 ltj.tips->includes(tlt) and 
 tlt.pJob->includes(ltj) and
 jr.jr2jc->includes(jr2jc) and 
@@ -3354,9 +3427,10 @@ s.s2tlt->includes(s2tlt) and
 s2tlt.s->includes(s) and
 s2tlt.tlt->includes(tlt) and
 tlt.s2tlt->includes(s2tlt) and
-true = true and
-true = true and
-true = true)
+s2tlt.s.jr.convertSampleEnum(s2tlt.s.state) = s2tlt.tlt.pJob.jc.convertJobEnum(s2tlt.tlt.status) and
+s2tlt.tlt.sourceCavityIndex = s2tlt.s.getSrcTubeOrder() and
+s2tlt.tlt.targetCavityIndex = s2tlt.s.getPlateIndex() and
+s2tlt.tlt.volume = s2tlt.tlt.pJob.ds2ltj.ds.volume)
 
 context RuleCollection::IncubateJob_New_1_integration (
     matchSR: Tuple(jr: JobRequest, assay: Assay, i: Incubate),
@@ -3583,11 +3657,18 @@ ar.rType->includes(r) and
 r.jAdd->includes(ar) and 
 ar.ar2ltj.ltj.tips->size() <> Sample.allInstances()->size() and 
 ar.ar2ltj.ltj.tips->size() + 1 = s.getId() and 
-ar.ar2ltj.ltj.tips->size().mod(8) = 0 and
+ar.ar2ltj.ltj.tips->size().mod(8) = 0 and 
+assay.name <> Undefined and 
+ar.id <> Undefined and 
+s.sampleID <> Undefined and 
+s.state = SampleState::Waiting and 
+r.name <> Undefined and
 jc.labware->includes(mp) and 
 mp.jc->includes(jc) and 
 t.jc->includes(jc) and 
-jc.labware->includes(t) and
+jc.labware->includes(t) and 
+mp.name <> Undefined and 
+t.name <> Undefined and
 jc.jobs->includes(ltj) and 
 ltj.jc->includes(jc) and 
 t.sJob->includes(ltj) and 
@@ -3641,9 +3722,10 @@ ar2ltj.ar->includes(ar) and
 ar.ar2ltj->includes(ar2ltj) and
 ltj.ar2ltj->includes(ar2ltj) and
 ar2ltj.ltj->includes(ltj) and
-true = true and
-true = true and
-true = true))
+ar2tlt.s.jr.convertSampleEnum(ar2tlt.s.state) = ar2tlt.tlt.pJob.jc.convertJobEnum(ar2tlt.tlt.status) and
+ar2tlt.tlt.targetCavityIndex = ar2tlt.s.getPlateIndex() and
+ar2tlt.tlt.volume = ar2tlt.tlt.pJob.ar2ltj.ar.volume and
+ar2ltj.ltj.protocolStepName = ar2ltj.ar.id))
 
 context RuleCollection::AddReagent_Exist_integration (
     matchSR: Tuple(jr: JobRequest, assay: Assay, ar: AddReagent, r: Reagent, s: Sample),
@@ -3674,7 +3756,12 @@ ar.rType->includes(r) and
 r.jAdd->includes(ar) and 
 ar.ar2ltj.ltj.tips->size() <> Sample.allInstances()->size() and 
 ar.ar2ltj.ltj.tips->size() + 1 = s.getId() and 
-ar.ar2ltj.ltj.tips->size().mod(8) <> 0 and
+ar.ar2ltj.ltj.tips->size().mod(8) <> 0 and 
+assay.name <> Undefined and 
+ar.id <> Undefined and 
+s.sampleID <> Undefined and 
+s.state = SampleState::Waiting and 
+r.name <> Undefined and
 jc.labware->includes(mp) and 
 mp.jc->includes(jc) and 
 t.jc->includes(jc) and 
@@ -3685,7 +3772,9 @@ t.sJob->includes(ltj) and
 ltj.source->includes(t) and 
 ltj.target->includes(mp) and 
 mp.tJob->includes(ltj) and 
-ltj.tips->size() < 8 and
+ltj.tips->size() < 8 and 
+mp.name <> Undefined and 
+t.name <> Undefined and
 ltj.tips->includes(tlt) and 
 tlt.pJob->includes(ltj) and
 jr.jr2jc->includes(jr2jc) and 
@@ -3734,8 +3823,9 @@ ar2tlt.s->includes(s) and
 s.ar2tlt->includes(ar2tlt) and
 tlt.ar2tlt->includes(ar2tlt) and
 ar2tlt.tlt->includes(tlt) and
-true = true and
-true = true)
+ar2tlt.s.jr.convertSampleEnum(ar2tlt.s.state) = ar2tlt.tlt.pJob.jc.convertJobEnum(ar2tlt.tlt.status) and
+ar2tlt.tlt.targetCavityIndex = ar2tlt.s.getPlateIndex() and
+ar2tlt.tlt.volume = ar2tlt.tlt.pJob.ar2ltj.ar.volume)
 
 context RuleCollection::Distribute_IncubateJob_integration (
     matchSR: Tuple(jr: JobRequest, assay: Assay, ds: DistributeSample, i: Incubate),
@@ -4299,11 +4389,17 @@ jr.samples->includes(s) and
 s.jr->includes(jr) and 
 ds.ds2ltj.ltj.tips->size() <> Sample.allInstances()->size() and 
 ds.ds2ltj.ltj.tips->size() + 1 = s.getId() and 
-ds.ds2ltj.ltj.tips->size().mod(8) = 0 and
+ds.ds2ltj.ltj.tips->size().mod(8) = 0 and 
+assay.name <> Undefined and 
+ds.id <> Undefined and 
+s.sampleID <> Undefined and 
+s.state = SampleState::Waiting and
 tr.jc->includes(jc) and 
 jc.labware->includes(tr) and 
 jc.labware->includes(mp) and 
-mp.jc->includes(jc) and
+mp.jc->includes(jc) and 
+tr.barcodes <> '' and 
+mp.name <> Undefined and
 jr.jr2jc->includes(jr2jc) and 
 jr2jc.jr->includes(jr) and 
 jc.jr2jc->includes(jr2jc) and 
@@ -4366,10 +4462,11 @@ ds.ds2ltj->includes(ds2ltj) and
 ds2ltj.ds->includes(ds) and
 ds2ltj.ltj->includes(ltj) and
 ltj.ds2ltj->includes(ds2ltj) and
-true = true and
-true = true and
-true = true and
-true = true))))
+s2tlt.s.jr.convertSampleEnum(s2tlt.s.state) = s2tlt.tlt.pJob.jc.convertJobEnum(s2tlt.tlt.status) and
+s2tlt.tlt.sourceCavityIndex = s2tlt.s.getSrcTubeOrder() and
+s2tlt.tlt.targetCavityIndex = s2tlt.s.getPlateIndex() and
+s2tlt.tlt.volume = s2tlt.tlt.pJob.ds2ltj.ds.volume and
+ds2ltj.ltj.protocolStepName = ds2ltj.ds.id))))
 
 context RuleCollection::DistributeSample_Exist_coEvol (
     matchSL: Tuple(jr: JobRequest, assay: Assay, ds: DistributeSample, s: Sample),
@@ -4396,7 +4493,11 @@ jr.samples->includes(s) and
 s.jr->includes(jr) and 
 ds.ds2ltj.ltj.tips->size() <> Sample.allInstances()->size() and 
 ds.ds2ltj.ltj.tips->size() + 1 = s.getId() and 
-ds.ds2ltj.ltj.tips->size().mod(8) <> 0 and
+ds.ds2ltj.ltj.tips->size().mod(8) <> 0 and 
+assay.name <> Undefined and 
+ds.id <> Undefined and 
+s.sampleID <> Undefined and 
+s.state = SampleState::Waiting and
 tr.jc->includes(jc) and 
 jc.labware->includes(tr) and 
 jc.labware->includes(mp) and 
@@ -4407,7 +4508,9 @@ tr.sJob->includes(ltj) and
 ltj.source->includes(tr) and 
 ltj.target->includes(mp) and 
 mp.tJob->includes(ltj) and 
-ltj.tips->size() < 8 and
+ltj.tips->size() < 8 and 
+tr.barcodes <> '' and 
+mp.name <> Undefined and
 ltj.tips->size() < 8 and
 jr.jr2jc->includes(jr2jc) and 
 jr2jc.jr->includes(jr) and 
@@ -4469,9 +4572,10 @@ s.s2tlt->includes(s2tlt) and
 s2tlt.s->includes(s) and
 s2tlt.tlt->includes(tlt) and
 tlt.s2tlt->includes(s2tlt) and
-true = true and
-true = true and
-true = true))
+s2tlt.s.jr.convertSampleEnum(s2tlt.s.state) = s2tlt.tlt.pJob.jc.convertJobEnum(s2tlt.tlt.status) and
+s2tlt.tlt.sourceCavityIndex = s2tlt.s.getSrcTubeOrder() and
+s2tlt.tlt.targetCavityIndex = s2tlt.s.getPlateIndex() and
+s2tlt.tlt.volume = s2tlt.tlt.pJob.ds2ltj.ds.volume))
 
 context RuleCollection::IncubateJob_New_1_coEvol (
     matchSL: Tuple(jr: JobRequest, assay: Assay, i: Incubate),
@@ -4720,11 +4824,18 @@ ar.rType->includes(r) and
 r.jAdd->includes(ar) and 
 ar.ar2ltj.ltj.tips->size() <> Sample.allInstances()->size() and 
 ar.ar2ltj.ltj.tips->size() + 1 = s.getId() and 
-ar.ar2ltj.ltj.tips->size().mod(8) = 0 and
+ar.ar2ltj.ltj.tips->size().mod(8) = 0 and 
+assay.name <> Undefined and 
+ar.id <> Undefined and 
+s.sampleID <> Undefined and 
+s.state = SampleState::Waiting and 
+r.name <> Undefined and
 jc.labware->includes(mp) and 
 mp.jc->includes(jc) and 
 t.jc->includes(jc) and 
-jc.labware->includes(t) and
+jc.labware->includes(t) and 
+mp.name <> Undefined and 
+t.name <> Undefined and
 jr.jr2jc->includes(jr2jc) and 
 jr2jc.jr->includes(jr) and 
 jc.jr2jc->includes(jr2jc) and 
@@ -4790,9 +4901,10 @@ ar2ltj.ar->includes(ar) and
 ar.ar2ltj->includes(ar2ltj) and
 ltj.ar2ltj->includes(ar2ltj) and
 ar2ltj.ltj->includes(ltj) and
-true = true and
-true = true and
-true = true))))
+ar2tlt.s.jr.convertSampleEnum(ar2tlt.s.state) = ar2tlt.tlt.pJob.jc.convertJobEnum(ar2tlt.tlt.status) and
+ar2tlt.tlt.targetCavityIndex = ar2tlt.s.getPlateIndex() and
+ar2tlt.tlt.volume = ar2tlt.tlt.pJob.ar2ltj.ar.volume and
+ar2ltj.ltj.protocolStepName = ar2ltj.ar.id))))
 
 context RuleCollection::AddReagent_Exist_coEvol (
     matchSL: Tuple(jr: JobRequest, assay: Assay, ar: AddReagent, r: Reagent, s: Sample),
@@ -4822,7 +4934,12 @@ ar.rType->includes(r) and
 r.jAdd->includes(ar) and 
 ar.ar2ltj.ltj.tips->size() <> Sample.allInstances()->size() and 
 ar.ar2ltj.ltj.tips->size() + 1 = s.getId() and 
-ar.ar2ltj.ltj.tips->size().mod(8) <> 0 and
+ar.ar2ltj.ltj.tips->size().mod(8) <> 0 and 
+assay.name <> Undefined and 
+ar.id <> Undefined and 
+s.sampleID <> Undefined and 
+s.state = SampleState::Waiting and 
+r.name <> Undefined and
 jc.labware->includes(mp) and 
 mp.jc->includes(jc) and 
 t.jc->includes(jc) and 
@@ -4833,7 +4950,9 @@ t.sJob->includes(ltj) and
 ltj.source->includes(t) and 
 ltj.target->includes(mp) and 
 mp.tJob->includes(ltj) and 
-ltj.tips->size() < 8 and
+ltj.tips->size() < 8 and 
+mp.name <> Undefined and 
+t.name <> Undefined and
 ltj.tips->size() < 8 and
 jr.jr2jc->includes(jr2jc) and 
 jr2jc.jr->includes(jr) and 
@@ -4898,8 +5017,9 @@ ar2tlt.s->includes(s) and
 s.ar2tlt->includes(ar2tlt) and
 tlt.ar2tlt->includes(ar2tlt) and
 ar2tlt.tlt->includes(tlt) and
-true = true and
-true = true))
+ar2tlt.s.jr.convertSampleEnum(ar2tlt.s.state) = ar2tlt.tlt.pJob.jc.convertJobEnum(ar2tlt.tlt.status) and
+ar2tlt.tlt.targetCavityIndex = ar2tlt.s.getPlateIndex() and
+ar2tlt.tlt.volume = ar2tlt.tlt.pJob.ar2ltj.ar.volume))
 
 context RuleCollection::Distribute_IncubateJob_coEvol (
     matchSL: Tuple(jr: JobRequest, assay: Assay, ds: DistributeSample, i: Incubate),

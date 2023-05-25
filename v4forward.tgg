@@ -220,6 +220,9 @@ checkSource(
     
 
     S2TLT:
+    [self.s.jr.convertSampleEnum(self.s.state) = self.tlt.pJob.jc.convertJobEnum(self.tlt.status)]
+    `self.tlt.status := (if self.s.jr.convertSampleEnum(self.s.state) = 1 then JobStatus::Planned else JobStatus::Failed endif)`
+    `self.s.state := (if self.tlt.pJob.jc.convertJobEnum(self.tlt.status) = 1 then SampleState::Waiting else SampleState::Error endif)`
     [self.tlt.sourceCavityIndex = self.s.getSrcTubeOrder()]
     `self.tlt.sourceCavityIndex := self.s.getSrcTubeOrder()`
     ``
@@ -288,6 +291,9 @@ checkSource(
 ){
     (s*, tlt) as (s, tlt) in s2tlt:S2TLT
     S2TLT:
+    [self.s.jr.convertSampleEnum(self.s.state) = self.tlt.pJob.jc.convertJobEnum(self.tlt.status)]
+    `self.tlt.status := (if self.s.jr.convertSampleEnum(self.s.state) = 1 then JobStatus::Planned else JobStatus::Failed endif)`
+    `self.s.state := (if self.tlt.pJob.jc.convertJobEnum(self.tlt.status) = 1 then SampleState::Waiting else SampleState::Error endif)`
     [self.tlt.sourceCavityIndex = self.s.getSrcTubeOrder()]
     `self.tlt.sourceCavityIndex := self.s.getSrcTubeOrder()`
     ``
@@ -492,7 +498,10 @@ checkSource(
 ){
     (s*, tlt) as (s, tlt) in ar2tlt:AR2TLT
     (ar*, ltj) as (ar, ltj) in ar2ltj:AR2LTJ
-    AR2TLT: 
+    AR2TLT:
+    [self.s.jr.convertSampleEnum(self.s.state) = self.tlt.pJob.jc.convertJobEnum(self.tlt.status)]
+    `self.tlt.status := (if self.s.jr.convertSampleEnum(self.s.state) = 1 then JobStatus::Planned else JobStatus::Failed endif)`
+    `self.s.state := (if self.tlt.pJob.jc.convertJobEnum(self.tlt.status) = 1 then SampleState::Waiting else SampleState::Error endif)`
     [self.tlt.targetCavityIndex = self.s.getPlateIndex()]
     `self.tlt.targetCavityIndex := self.s.getPlateIndex()`
     ``
@@ -560,7 +569,10 @@ checkSource(
     (ar, ltj) as (ar, ltj) in ar2ltj:AR2LTJ
 ){
     (s*, tlt) as (s, tlt) in ar2tlt:AR2TLT
-    AR2TLT: 
+    AR2TLT:
+    [self.s.jr.convertSampleEnum(self.s.state) = self.tlt.pJob.jc.convertJobEnum(self.tlt.status)]
+    `self.tlt.status := (if self.s.jr.convertSampleEnum(self.s.state) = 1 then JobStatus::Planned else JobStatus::Failed endif)`
+    `self.s.state := (if self.tlt.pJob.jc.convertJobEnum(self.tlt.status) = 1 then SampleState::Waiting else SampleState::Error endif)`
     [self.tlt.targetCavityIndex = self.s.getPlateIndex()]
     `self.tlt.targetCavityIndex := self.s.getPlateIndex()`
     ``
